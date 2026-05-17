@@ -97,7 +97,21 @@ glu_sub <- glu %>% transmute(
 
 # Triglycerides + HDL
 trigly_sub <- trigly %>% transmute(SEQN, triglycerides = LBXTR)
-hdl_sub    <- hdl    %>% transmute(SEQN, hdl           = LBDHDD)
+
+# HDL column name changed across cycles:
+#   Cycles A-B (1999-2002): LBDHDL  (from LAB13 / L13_B)
+#   Cycle  C   (2003-2004): LBXHDD  (from L13_C)
+#   Cycles D+  (2005+):     LBDHDD  (standard)
+# Coalesce all three column names into a unified variable.
+{
+  hdl_cols <- list(
+    LBDHDD = if ("LBDHDD" %in% names(hdl)) hdl[["LBDHDD"]] else rep(NA_real_, nrow(hdl)),
+    LBXHDD = if ("LBXHDD" %in% names(hdl)) hdl[["LBXHDD"]] else rep(NA_real_, nrow(hdl)),
+    LBDHDL = if ("LBDHDL" %in% names(hdl)) hdl[["LBDHDL"]] else rep(NA_real_, nrow(hdl))
+  )
+  hdl[["hdl_combined"]] <- dplyr::coalesce(hdl_cols$LBDHDD, hdl_cols$LBXHDD, hdl_cols$LBDHDL)
+}
+hdl_sub <- hdl %>% transmute(SEQN, hdl = hdl_combined)
 tchol_sub  <- tchol  %>% transmute(SEQN, total_chol    = LBXTC)
 
 # Prior CVD: MCQ160B (CHF), MCQ160C (CHD), MCQ160E (MI), MCQ160F (stroke).

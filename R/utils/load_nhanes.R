@@ -23,11 +23,34 @@ load_nhanes_table <- function(table) {
   if (!any(existing)) {
     stop(sprintf("No files found for table '%s' in data/raw/nhanes/", table))
   }
-  map2_dfr(paths[existing], cycle_years[existing], function(p, yr) {
+  # Load each cycle, stripping factors/labels to base types
+  dfs <- map2(paths[existing], cycle_years[existing], function(p, yr) {
     df <- readRDS(p)
     df$cycle <- yr
+    for (col in names(df)) {
+      v <- df[[col]]
+      if (inherits(v, "haven_labelled")) v <- haven::zap_labels(v)
+      if (is.factor(v))                 v <- as.character(v)
+      df[[col]] <- v
+    }
     df
   })
+
+  # Unify column types across cycles so bind_rows succeeds.
+  # If any cycle stores a column as character, coerce all cycles to character.
+  all_cols <- unique(unlist(lapply(dfs, names)))
+  for (col in all_cols) {
+    types <- sapply(dfs, function(d) if (col %in% names(d)) class(d[[col]])[1] else NA_character_)
+    types <- types[!is.na(types)]
+    if (length(unique(types)) > 1 && "character" %in% types) {
+      dfs <- lapply(dfs, function(d) {
+        if (col %in% names(d)) d[[col]] <- as.character(d[[col]])
+        d
+      })
+    }
+  }
+
+  dplyr::bind_rows(dfs)
 }
 
 #' Safe column accessor that returns NA when a column is missing

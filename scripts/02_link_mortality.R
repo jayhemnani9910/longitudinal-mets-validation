@@ -48,29 +48,38 @@ for (f in lmf_files) {
   )
 }
 
-# LMF column positions per NCHS 2019 documentation
-# Reference: NCHS Public-Use Linked Mortality Files documentation, 2019 release
-# https://www.cdc.gov/nchs/data-linkage/mortality-public.htm
-# Verify these positions against the current PDF documentation before running.
+# LMF column positions per NCHS 2019 PUBLIC-USE release.
+# Verified against actual file structure (files are 46-48 chars wide):
+#   1-14: PUBLICID (SEQN, right-justified, space-padded)
+#   15:   ELIGSTAT  (1=eligible, 2=under 18, 3=ineligible)
+#   16:   MORTSTAT  (0=alive, 1=deceased, .=missing)
+#   17-19: UCOD_LEADING (NCHS 113-cause recode, 3-char code; '.' = missing)
+#   20:   DIABETES  (0/1, '.'=missing)
+#   21:   HYPERTEN  (0/1, '.'=missing)
+#   22:   DODQTR    (1-4, ' '=missing)
+#   23-26: DODYEAR  (4-digit year, suppressed for privacy in public file)
+#   27-34: WGT_NEW  (8-char, suppressed in public file)
+#   35-42: SA_WGT_NEW (8-char, suppressed)
+#   43-45: PERMTH_INT (3-char, person-months from interview to censoring)
+#   46-48: PERMTH_EXM (3-char, person-months from MEC exam to censoring)
+# Note: WGT_NEW, SA_WGT_NEW, DODQTR, DODYEAR are suppressed (spaces) in the
+#       public-use file to protect respondent privacy.
 lmf_widths <- fwf_positions(
-  start = c(1,  15, 16, 17, 21, 22, 23, 24, 28, 49, 60, 71, 73, 84, 95),
-  end   = c(14, 15, 16, 20, 21, 22, 23, 27, 47, 59, 70, 72, 83, 94, 95),
+  start = c(1,  15, 16, 17, 20, 21, 22, 23, 27, 35, 43, 46),
+  end   = c(14, 15, 16, 19, 20, 21, 22, 26, 34, 42, 45, 48),
   col_names = c(
     "SEQN",            # NHANES Sequence ID (string, 14 char)
-    "ELIGSTAT",        # Mortality eligibility (1=eligible, 2=under 18 at survey, 3=ineligible)
+    "ELIGSTAT",        # Mortality eligibility
     "MORTSTAT",        # Vital status (0=alive, 1=deceased)
-    "UCOD_LEADING",    # Underlying cause of death (3-char NCHS code)
-    "DIABETES",        # Diabetes flagged as cause (0/1)
-    "HYPERTEN",        # Hypertension flagged as cause (0/1)
-    "DODQTR",          # Quarter of death (1-4)
-    "DODYEAR",         # Year of death (4-digit)
-    "WGT_NEW",         # MEC sample weight adjusted for mortality follow-up
-    "SA_WGT_NEW",      # Subsample weight adjusted
+    "UCOD_LEADING",    # Underlying cause of death (NCHS 113 recode)
+    "DIABETES",        # Diabetes flagged as contributing cause
+    "HYPERTEN",        # Hypertension flagged as contributing cause
+    "DODQTR",          # Quarter of death (suppressed in public file)
+    "DODYEAR",         # Year of death (suppressed in public file)
+    "WGT_NEW",         # MEC weight adjusted for mortality (suppressed)
+    "SA_WGT_NEW",      # Subsample weight adjusted (suppressed)
     "PERMTH_INT",      # Person-months from interview to death/censor
-    "PERMTH_EXM",      # Person-months from MEC exam to death/censor
-    "MORTSRCE_NDI",    # Source: NDI match
-    "MORTSRCE_CMS",    # Source: CMS Medicare match
-    "MORTSRCE_SSA"     # Source: SSA match
+    "PERMTH_EXM"       # Person-months from MEC exam to death/censor
   )
 )
 
@@ -96,13 +105,27 @@ lmf_list <- lapply(file.path("data/raw/lmf", lmf_files), function(p) {
 lmf_list <- Filter(Negate(is.null), lmf_list)
 lmf_all <- do.call(rbind, lmf_list)
 
-# Coerce numeric columns
+# Coerce numeric columns (replace '.' and blank missing codes with NA)
 for (col in c("ELIGSTAT", "MORTSTAT", "DIABETES", "HYPERTEN", "DODQTR",
-              "DODYEAR", "WGT_NEW", "SA_WGT_NEW", "PERMTH_INT", "PERMTH_EXM",
-              "MORTSRCE_NDI", "MORTSRCE_CMS", "MORTSRCE_SSA")) {
-  lmf_all[[col]] <- as.integer(lmf_all[[col]])
+              "DODYEAR", "PERMTH_INT", "PERMTH_EXM")) {
+  v <- trimws(lmf_all[[col]])
+  v[v == "." | v == ""] <- NA
+  lmf_all[[col]] <- suppressWarnings(as.integer(v))
 }
-lmf_all$SEQN <- as.integer(lmf_all$SEQN)
+# UCOD_LEADING is a 3-char code string ("001"..."010"); coerce to integer.
+# NCHS 113-cause recode summary (top 10 leading causes):
+#   1=Heart disease, 2=Malignant neoplasms, 3=Chronic lower respiratory,
+#   4=Accidents, 5=Cerebrovascular, 6=Alzheimer's, 7=Diabetes mellitus,
+#   8=Influenza/pneumonia, 9=Nephritis, 10=All others
+{
+  v <- trimws(lmf_all[["UCOD_LEADING"]])
+  v[v == "." | v == ""] <- NA
+  lmf_all[["UCOD_LEADING"]] <- suppressWarnings(as.integer(v))
+}
+# WGT_NEW and SA_WGT_NEW are suppressed in the public file; keep as NA
+lmf_all$WGT_NEW    <- NA_real_
+lmf_all$SA_WGT_NEW <- NA_real_
+lmf_all$SEQN <- as.integer(trimws(lmf_all$SEQN))
 
 saveRDS(lmf_all, "data/raw/lmf/lmf_combined.rds")
 
