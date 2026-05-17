@@ -4,7 +4,9 @@
 # These features feed both the B9 decision tree (R/scores/b9_tree.R) and the
 # US-refit CART (Task 5.2b).
 
-source("R/scores/rmrs.R")  # for elliot_sigmoid + scale_factor
+# NOTE: this file depends on elliot_sigmoid() and scale_factor() from rmrs.R.
+# Callers must source("rmrs.R") FIRST before sourcing this file.
+# (Auto-source removed to avoid relative-path issues in test contexts.)
 
 #' Compute B9 synthetic features from raw measurements.
 #'

@@ -10,7 +10,8 @@
 # This is a faithful-as-possible external validation approach (plan task 5.2a).
 # For full transportability validation, refit a US CART (plan task 5.2b).
 
-source("R/scores/b9_features.R")
+# NOTE: this file depends on functions defined in b9_features.R.
+# Callers must source("rmrs.R") then source("b9_features.R") BEFORE this file.
 
 #' Predict MetS leaf probability per the B9 decision tree (depth 5).
 #'

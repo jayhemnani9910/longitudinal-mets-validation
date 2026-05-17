@@ -1,6 +1,7 @@
 library(testthat)
-source("R/scores/b9_features.R")
-source("R/scores/b9_tree.R")
+source("../../R/scores/rmrs.R")        # provides elliot_sigmoid + scale_factor
+source("../../R/scores/b9_features.R") # depends on the above
+source("../../R/scores/b9_tree.R")
 
 # ---- b9_features -----------------------------------------------------------
 
@@ -11,9 +12,11 @@ test_that("b9_features returns the expected 5-element structure", {
   expect_true(all(is.finite(unlist(feat))))
 })
 
-test_that("b9_features matches Figure 7 worked example (woman, sBP=140, dBP=90, waist=89)", {
+test_that("b9_features matches Figure 7 worked example (woman, sBP=140, dBP=90, waist=89, Korean cohort)", {
+  # B9 was trained on Korean data, so the Figure 7 worked example uses the
+  # Korean WC threshold (Female >= 85 cm), NOT the US threshold (Female >= 88).
   feat <- b9_features(waist = 89, sbp = 140, dbp = 90,
-                       sex = "female", ethnicity = "us")
+                       sex = "female", ethnicity = "kr")
   # Per B9 paper Fig 7: BP = 0.84, WC = 0.66
   # Then BPWC_add = 1.50, BPWC_mul = 0.55, BPWC_dif = 0.18
   expect_equal(feat$BP, 0.84, tolerance = 0.05)
@@ -34,7 +37,7 @@ test_that("b9_tree_predict returns a probability in [0,1]", {
 
 test_that("Figure 7 worked example yields probability ~0.31", {
   feat <- b9_features(waist = 89, sbp = 140, dbp = 90,
-                       sex = "female", ethnicity = "us")
+                       sex = "female", ethnicity = "kr")
   p <- with(feat, b9_tree_predict(BPWC_add, BPWC_mul, BPWC_dif))
   # B9 Figure 7 reports diagnosis: MetS, risk: 0.31
   expect_equal(p, 0.31, tolerance = 0.05)

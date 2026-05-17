@@ -1,5 +1,5 @@
 library(testthat)
-source("R/scores/pce.R")
+source("../../R/scores/pce.R")
 
 test_that("pce returns plausible 10-year risk for a low-risk young adult", {
   # Healthy 45yo white woman, no smoker, no diabetes, normal lipids and BP

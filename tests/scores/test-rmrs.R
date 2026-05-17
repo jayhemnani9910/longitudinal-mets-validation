@@ -2,7 +2,7 @@ library(testthat)
 
 # Source paths assume tests are run from project root via:
 #   Rscript -e 'testthat::test_dir("tests")'
-source("R/scores/rmrs.R")
+source("../../R/scores/rmrs.R")
 
 # ---- elliot_sigmoid ---------------------------------------------------------
 

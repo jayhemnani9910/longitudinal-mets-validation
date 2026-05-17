@@ -1,5 +1,5 @@
 library(testthat)
-source("R/scores/framingham.R")
+source("../../R/scores/framingham.R")
 
 test_that("framingham_2008 returns plausible risk for low-risk young adult", {
   risk <- framingham_2008(

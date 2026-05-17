@@ -1,5 +1,5 @@
 library(testthat)
-source("R/scores/findrisc.R")
+source("../../R/scores/findrisc.R")
 
 test_that("findrisc returns 0 for the lowest-risk profile", {
   pts <- findrisc(
