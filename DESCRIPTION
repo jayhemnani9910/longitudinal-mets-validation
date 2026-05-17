@@ -1,0 +1,7 @@
+Package: longitudinalMetsValidation
+Title: Longitudinal Validation of Metabolic Syndrome Risk Scores
+Version: 0.0.1.9000
+Authors@R: person("Jay", "Hemnani", role = c("aut", "cre"))
+Description: External validation of MetS risk scores on NHANES.
+License: MIT + file LICENSE
+Encoding: UTF-8
