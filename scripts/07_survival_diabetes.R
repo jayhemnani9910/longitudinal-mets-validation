@@ -32,9 +32,10 @@ for (s in scores) {
   rows <- !is.na(df[[s]])
   df_s <- df[rows, ]
 
+  fgr_formula <- as.formula(sprintf("Hist(followup_years, competing_dm) ~ %s", s))
   fit <- tryCatch(
     FGR(
-      Hist(followup_years, competing_dm) ~ get(s),
+      fgr_formula,
       data  = df_s,
       cause = 1
     ),
@@ -52,7 +53,7 @@ for (s in scores) {
       cause  = 1,
       times  = c(5, 10),
       weighting = "marginal",
-      iid    = TRUE
+      iid    = FALSE   # iid=TRUE OOM; bootstrap CIs deferred
     ),
     error = function(e) {
       message(sprintf("  timeROC failed: %s", e$message))
@@ -64,7 +65,7 @@ for (s in scores) {
 
   if (!is.null(roc_obj)) {
     message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%.3f",
-                    sum(rows), roc_obj$AUC[1], roc_obj$AUC[2]))
+                    sum(rows), roc_obj$AUC_1, roc_obj$AUC_2))
   }
 }
 

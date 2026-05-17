@@ -56,7 +56,7 @@ for (s in scores) {
       cause  = 1,
       times  = c(5, 10),
       weighting = "marginal",
-      iid    = TRUE
+      iid    = FALSE   # iid=TRUE too memory-intensive for N~17k; use bootstrap CIs later
     ),
     error = function(e) {
       message(sprintf("  timeROC failed: %s", e$message))
@@ -67,8 +67,9 @@ for (s in scores) {
   results[[s]] <- list(rows = sum(rows), fit = fit, roc = roc_obj)
 
   if (!is.null(roc_obj)) {
-    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%.3f",
-                    sum(rows), roc_obj$AUC[1], roc_obj$AUC[2]))
+    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%s",
+                    sum(rows), roc_obj$AUC[1],
+                    ifelse(is.na(roc_obj$AUC[2]), "NA", sprintf("%.3f", roc_obj$AUC[2]))))
   }
 }
 

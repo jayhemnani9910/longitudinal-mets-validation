@@ -33,9 +33,11 @@ for (s in scores) {
   df_s <- df[rows, ]
 
   # Fine-Gray for subdistribution hazards
+  # Note: get(s) fails inside formula for FGR; use as.formula() instead.
+  fgr_formula <- as.formula(sprintf("Hist(followup_years, competing_cv) ~ %s", s))
   fit <- tryCatch(
     FGR(
-      Hist(followup_years, competing_cv) ~ get(s),
+      fgr_formula,
       data  = df_s,
       cause = 1
     ),
@@ -54,7 +56,7 @@ for (s in scores) {
       cause  = 1,
       times  = c(5, 10),
       weighting = "marginal",
-      iid    = TRUE
+      iid    = FALSE   # iid=TRUE OOM; bootstrap CIs deferred
     ),
     error = function(e) {
       message(sprintf("  timeROC failed: %s", e$message))
@@ -65,8 +67,10 @@ for (s in scores) {
   results[[s]] <- list(rows = sum(rows), fit = fit, roc = roc_obj)
 
   if (!is.null(roc_obj)) {
-    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%.3f",
-                    sum(rows), roc_obj$AUC[1], roc_obj$AUC[2]))
+    # For ipcwcompetingrisksROC: AUC_1[t1,t2] = AUC for cause 1 at each timepoint
+    message(sprintf("  n=%d  AUC_cause1(5y)=%.3f  AUC_cause1(10y)=%s",
+                    sum(rows), roc_obj$AUC_1[1],
+                    ifelse(is.na(roc_obj$AUC_1[2]), "NA", sprintf("%.3f", roc_obj$AUC_1[2]))))
   }
 }
 
@@ -75,8 +79,8 @@ saveRDS(results, "results/cache/cv_survival.rds")
 summary_tbl <- data.frame(
   score   = scores,
   n       = sapply(results, function(r) r$rows),
-  auc_5y  = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[1]),
-  auc_10y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[2])
+  auc_5y  = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[1]),
+  auc_10y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[2])
 )
 write.csv(summary_tbl, "results/cv_summary.csv", row.names = FALSE)
 
