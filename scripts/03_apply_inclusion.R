@@ -41,30 +41,47 @@ message("Standardizing column names ...")
 # RIDRETH1 (no separate Asian category) is available all cycles.
 # We prefer RIDRETH3 when present; for earlier cycles, NH Asian is collapsed
 # into Other.
-demo_sub <- demo %>% transmute(
-  SEQN,
-  cycle,
-  age = RIDAGEYR,
-  sex = factor(
-    RIAGENDR,
-    levels = c(1, 2),
-    labels = c("male", "female")
+# nhanesA converts factor codes to their labels when the package returns
+# data frames, and our load_nhanes_table strips factor structure to character.
+# So RIAGENDR arrives as "Male"/"Female" and RIDRETH* arrive as text labels.
+# Map these back to the canonical factor levels expected downstream.
+
+# Normalize gender: handles both numeric (1/2) and text label forms.
+demo <- demo %>% mutate(
+  sex_raw = case_when(
+    RIAGENDR %in% c("1", "Male")   ~ "male",
+    RIAGENDR %in% c("2", "Female") ~ "female",
+    TRUE ~ NA_character_
   ),
-  race_raw = if ("RIDRETH3" %in% names(.)) {
-    coalesce(RIDRETH3, RIDRETH1)
+  # Normalize race: RIDRETH3 preferred (has Asian category); fall back to RIDRETH1.
+  # Both may arrive as text labels or as character "1"-"7".
+  race_src = if ("RIDRETH3" %in% names(demo)) {
+    dplyr::coalesce(RIDRETH3, RIDRETH1)
   } else {
     RIDRETH1
   },
-  race = factor(
-    race_raw,
-    levels = c(1, 2, 3, 4, 6, 7),
-    labels = c("MexicanAm", "OtherHisp", "NHWhite",
-               "NHBlack",   "NHAsian",   "Other")
-  ),
+  race_raw = case_when(
+    race_src %in% c("1", "Mexican American")                      ~ "MexicanAm",
+    race_src %in% c("2", "Other Hispanic")                         ~ "OtherHisp",
+    race_src %in% c("3", "Non-Hispanic White")                     ~ "NHWhite",
+    race_src %in% c("4", "Non-Hispanic Black")                     ~ "NHBlack",
+    race_src %in% c("6", "Non-Hispanic Asian")                     ~ "NHAsian",
+    race_src %in% c("7", "Other Race - Including Multi-Racial", "Other") ~ "Other",
+    TRUE ~ NA_character_
+  )
+)
+
+demo_sub <- demo %>% transmute(
+  SEQN,
+  cycle,
+  age      = RIDAGEYR,
+  sex      = factor(sex_raw, levels = c("male", "female")),
+  race     = factor(race_raw, levels = c("MexicanAm", "OtherHisp", "NHWhite",
+                                          "NHBlack", "NHAsian", "Other")),
   wt_mec   = WTMEC2YR,
   sdmvpsu  = SDMVPSU,
   sdmvstra = SDMVSTRA
-) %>% select(-race_raw)
+)
 
 # Anthropometry
 bmx_sub <- bmx %>% transmute(
@@ -115,31 +132,35 @@ hdl_sub <- hdl %>% transmute(SEQN, hdl = hdl_combined)
 tchol_sub  <- tchol  %>% transmute(SEQN, total_chol    = LBXTC)
 
 # Prior CVD: MCQ160B (CHF), MCQ160C (CHD), MCQ160E (MI), MCQ160F (stroke).
-# Value 1 = yes, 2 = no, 7 = refused, 9 = don't know.
+# nhanesA converts to factor labels; after load_nhanes_table these are characters.
+# Numeric 1 = yes; text label = "Yes". Handle both forms.
+is_yes <- function(x) x %in% c("1", "Yes", "YES", 1L)
+
 mcq_sub <- mcq %>% transmute(
   SEQN,
-  prior_cvd = (MCQ160B == 1) | (MCQ160C == 1) |
-              (MCQ160E == 1) | (MCQ160F == 1),
+  prior_cvd = is_yes(MCQ160B) | is_yes(MCQ160C) |
+              is_yes(MCQ160E) | is_yes(MCQ160F),
   prior_cvd = replace_na(prior_cvd, FALSE)
 )
 
 # Prior T2D: DIQ010 == 1 means "doctor told you have diabetes"
 diq_sub <- diq %>% transmute(
   SEQN,
-  prior_t2d = (DIQ010 == 1),
+  prior_t2d = is_yes(DIQ010),
   prior_t2d = replace_na(prior_t2d, FALSE)
 )
 
-# Smoking: SMQ040 (current smoking) — 1=every day, 2=some days, 3=not at all
+# Smoking: SMQ040 (current smoking) — 1="Every day", 2="Some days", 3="Not at all"
 smq_sub <- smq %>% transmute(
   SEQN,
-  current_smoker = SMQ040 %in% c(1, 2)
+  current_smoker = SMQ040 %in% c("1", "2", "Every day", "Some days",
+                                   "Every day,", "Some days,")
 )
 
 # BP medication: BPQ050A == 1 means "now taking medicine for high BP"
 bpq_sub <- bpq %>% transmute(
   SEQN,
-  bp_treatment = BPQ050A == 1,
+  bp_treatment = is_yes(BPQ050A),
   bp_treatment = replace_na(bp_treatment, FALSE)
 )
 
@@ -166,7 +187,7 @@ df <- df %>%
   filter(age >= 20, age <= 79) %>%
   filter(!is.na(waist_cm),
          !is.na(fasting_glucose),
-         !is.na(sbp),
+         !is.na(sbp), !is.na(dbp),
          !is.na(triglycerides),
          !is.na(hdl)) %>%
   filter(!prior_cvd) %>%
