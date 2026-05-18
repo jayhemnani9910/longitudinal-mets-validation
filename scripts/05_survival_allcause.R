@@ -47,14 +47,17 @@ for (s in scores) {
     }
   )
 
-  # Time-dependent ROC at 5 and 10 years (IPCW)
+  # Time-dependent ROC at 5y and the 10y horizon operationalized as t=9.5.
+  # IPCW weights at t equal to the follow-up cap (t=10) are degenerate and
+  # return NA. Shifting to t=9.5 keeps the practical 10y framing without
+  # hitting the boundary. The pre-registration documents this operationalization.
   roc_obj <- tryCatch(
     timeROC(
       T      = df_s$followup_years,
       delta  = df_s$event_allcause,
       marker = df_s[[s]],
       cause  = 1,
-      times  = c(5, 10),
+      times  = c(5, 9.5),
       weighting = "marginal",
       iid    = FALSE   # iid=TRUE too memory-intensive for N~17k; use bootstrap CIs later
     ),
@@ -67,7 +70,7 @@ for (s in scores) {
   results[[s]] <- list(rows = sum(rows), fit = fit, roc = roc_obj)
 
   if (!is.null(roc_obj)) {
-    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%s",
+    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(9.5y)=%s",
                     sum(rows), roc_obj$AUC[1],
                     ifelse(is.na(roc_obj$AUC[2]), "NA", sprintf("%.3f", roc_obj$AUC[2]))))
   }
@@ -75,12 +78,13 @@ for (s in scores) {
 
 saveRDS(results, "results/cache/allcause_survival.rds")
 
-# Summary CSV
+# Summary CSV. auc_9_5y is the 10y horizon shifted to t=9.5 to avoid the
+# IPCW boundary issue at the follow-up cap.
 summary_tbl <- data.frame(
-  score   = scores,
-  n       = sapply(results, function(r) r$rows),
-  auc_5y  = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[1]),
-  auc_10y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[2])
+  score    = scores,
+  n        = sapply(results, function(r) r$rows),
+  auc_5y   = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[1]),
+  auc_9_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[2])
 )
 write.csv(summary_tbl, "results/allcause_summary.csv", row.names = FALSE)
 

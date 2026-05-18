@@ -24,7 +24,7 @@ The original Shin/Shim/Oh papers reported cross-sectional discrimination of the 
 
 - **H1** (RMRS vs PCE on CV mortality): The Robust Metabolic Syndrome Risk Score (RMRS) will achieve a 10-year time-dependent AUC for cardiovascular mortality that is statistically non-inferior to the ACC/AHA Pooled Cohort Equations (PCE), defined as the lower 95% CI of the AUC difference being above -0.05.
 - **H2** (RMRS vs Framingham on CV mortality): RMRS will achieve a 10-year time-dependent AUC for cardiovascular mortality that is statistically non-inferior to Framingham 2008 by the same non-inferiority margin.
-- **H3** (B9 tree vs FINDRISC on diabetes-related mortality): The B9 decision tree (leaf-probability output) will achieve a 10-year time-dependent AUC for diabetes-related mortality that is statistically non-inferior to FINDRISC.
+- **H3** (B9 tree vs FINDRISC on diabetes-related mortality): The B9 decision tree (leaf-probability output) will achieve a 10-year time-dependent AUC for diabetes-related mortality (broadened definition, see Variables / Outcomes) that is statistically non-inferior to FINDRISC by the same non-inferiority margin. Hypothesis-test horizon stays at the nominal 10 years (operationalized as `t = 9.5` for IPCW reasons). The 15-year horizon for the diabetes outcome is exploratory.
 - **H4** (RMRS for all-cause mortality): RMRS will achieve a 10-year time-dependent AUC > 0.60 for all-cause mortality (null: AUC = 0.50).
 - **H5** (B9 tree for all-cause mortality): The B9 decision tree will achieve a 10-year time-dependent AUC > 0.60 for all-cause mortality.
 
@@ -80,8 +80,16 @@ The remaining 10 of the 15 score × outcome pairs:
 
 ### Outcomes
 1. **All-cause mortality**: LMF MORTSTAT = 1 within 10 years of exam.
-2. **CV mortality**: NCHS UCOD113 recodes 54-68 (heart disease) and 70 (cerebrovascular). Competing risk: non-CV death.
-3. **Diabetes-related mortality**: NCHS UCOD113 recode 46. Competing risk: non-diabetes death.
+2. **CV mortality**: LMF UCOD_LEADING in {1 (heart disease), 5 (cerebrovascular)} within 10 years. Competing risk: non-CV death.
+3. **Diabetes-related mortality (broadened definition, 15-year follow-up)**: LMF UCOD_LEADING in {7 (diabetes mellitus), 9 (nephritis / nephrotic syndrome / nephrosis, frequently a diabetic-kidney complication)} OR LMF DIABETES contributing-cause flag = 1, within 15 years of exam. Competing risk: non-diabetes death within 15 years.
+
+   *Rationale for broadening.* A narrow definition (UCOD_LEADING == 7 only, capped at 10 years) yielded only 6 events at N = 17,031 on the first pipeline run. Six events is statistically unreliable for Fine-Gray subdistribution-hazards estimation (rule of thumb: at least 10-20 events per predictor parameter). The pre-specified expansion combines three changes:
+
+   - Add UCOD_LEADING == 9 (nephritis / nephrotic syndrome / nephrosis), which captures diabetic kidney disease deaths that are often coded as the underlying cause when the death certifier attributes the proximate event to renal failure rather than to diabetes itself.
+   - Add the DIABETES contributing-cause flag from the Linked Mortality File, which is set when diabetes appears on any line of the death certificate, not only as the underlying cause.
+   - Extend follow-up for the diabetes outcome alone to 15 years (180 months), to accumulate sufficient events for the competing-risks model.
+
+   All-cause and CV outcomes remain capped at 10 years. The diabetes-only extension reflects the slower mortality dynamics of diabetes-related death versus CV death.
 
 ### Risk scores under test (5)
 1. **RMRS** (Shin et al. 2024 PeerJ CS): continuous, [0, 1]. Inputs: waist, sBP, dBP, HDL, fasting glucose, triglycerides, sex.
@@ -103,7 +111,11 @@ The remaining 10 of the 15 score × outcome pairs:
 - **CV mortality** and **diabetes-related mortality**: Fine-Gray subdistribution hazards (`riskRegression::FGR`) with competing-risks framework. Survey weights applied where the software supports it; sensitivity analysis without weights to assess weight impact.
 
 ### Discrimination
-- Time-dependent ROC AUC at 5 years and 10 years using inverse probability of censoring weighting (IPCW), `timeROC::timeROC` with `iid = TRUE`.
+- Time-dependent ROC AUC using inverse probability of censoring weighting (IPCW) via `timeROC::timeROC`. Horizons:
+  - All-cause and CV outcomes: 5 years and a 10-year horizon operationalized as `t = 9.5` years.
+  - Diabetes outcome (15-year follow-up): 5 years, 10 years, and a 15-year horizon operationalized as `t = 14.5` years.
+  - The horizons at `t = 9.5` and `t = 14.5` substitute for the nominal 10-year and 15-year endpoints to avoid IPCW weight degeneracy at the exact follow-up cap, where the censoring distribution has no mass to the right of the evaluation time and weights blow up to NA. Shifting the evaluation point inward by 0.5 years preserves the 10-year and 15-year framing while keeping the IPCW estimator well-defined.
+- `iid = FALSE` for the AUC estimator at N ~ 17k due to memory constraints. Bootstrap CIs are computed separately.
 - 500 bootstrap iterations for confidence intervals, accounting for NHANES PSU structure (cluster bootstrap).
 - Pairwise DeLong tests via `timeROC::compare` for primary comparisons.
 
@@ -139,6 +151,13 @@ The remaining 10 of the 15 score × outcome pairs:
 - STROBE checklist for cohort study aspects.
 
 ## 8. Other
+
+### Changelog (pre-submission revisions)
+
+These are revisions to the draft made before OSF submission, while still in the planning / pilot-run phase. None of them are post-hoc changes after seeing primary-hypothesis test results; they are operational corrections to the analysis plan informed by a dry run of the pipeline on the assembled cohort.
+
+- **2026-05-18**: diabetes-mortality outcome broadened. The first pipeline run at N = 17,031 produced only 6 events under the narrow UCOD_LEADING == 7 / 10-year-cap definition. The diabetes outcome is now defined as UCOD_LEADING in {7, 9} OR DIABETES contributing-cause flag = 1, with a 15-year follow-up cap. All-cause and CV outcomes remain at 10 years. See section 6, Outcomes, item 3 for full rationale.
+- **2026-05-18**: time-dependent AUC horizons clarified. The 10-year and 15-year time points are operationalized as `t = 9.5` and `t = 14.5` to avoid IPCW weight degeneracy at the exact follow-up cap. See section 7, Discrimination.
 
 ### Deviations log
 Any deviation from this pre-registration will be documented in `prereg/deviations-log.md` in the project GitHub repository, with timestamp, reason, and impact assessment. Pre-registered analyses will be reported as planned even if deviations are also reported.

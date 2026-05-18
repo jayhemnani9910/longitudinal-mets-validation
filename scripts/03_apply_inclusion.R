@@ -208,16 +208,29 @@ df <- df %>%
 n_with_mortality <- nrow(df)
 message(sprintf("After mortality linkage (eligibility): %d", n_with_mortality))
 
-# Construct outcome variables with 10-year cap
-# Cap at 120 person-months for primary analyses (sensitivity: no-cap)
+# Construct outcome variables.
+# All-cause and CV mortality cap at 10 years (120 person-months).
+# Diabetes mortality cap extends to 15 years (180 person-months) because the
+# narrow 10y diabetes-as-underlying-cause definition yielded only 6 events at
+# N=17k, statistically unreliable for Fine-Gray. The diabetes-specific
+# definition is broadened in parallel (see event_dm below).
 message("Building outcomes ...")
 df <- df %>% mutate(
+  # 10y horizon for all-cause and CV
   followup_months = pmin(PERMTH_EXM, 120, na.rm = TRUE),
   followup_years  = followup_months / 12,
+
+  # 15y horizon for diabetes only
+  followup_months_dm = pmin(PERMTH_EXM, 180, na.rm = TRUE),
+  followup_years_dm  = followup_months_dm / 12,
 
   # All-cause within 10 years
   event_allcause = as.integer(MORTSTAT == 1 & PERMTH_EXM <= 120),
   event_allcause = replace_na(event_allcause, 0L),
+
+  # All-cause within 15 years (for diabetes competing-risk frame)
+  event_allcause_dm = as.integer(MORTSTAT == 1 & PERMTH_EXM <= 180),
+  event_allcause_dm = replace_na(event_allcause_dm, 0L),
 
   # CV mortality (NCHS UCOD113 recodes 1 = heart disease, 5 = stroke)
   # The UCOD_LEADING field uses these collapsed codes for cause classification.
@@ -228,25 +241,33 @@ df <- df %>% mutate(
   ),
   event_cv = replace_na(event_cv, 0L),
 
-  # Diabetes-related mortality (UCOD113 recode 7)
+  # Diabetes-related mortality, broadened definition within 15-year follow-up.
+  # Triggers on any of:
+  #   UCOD_LEADING == 7 (diabetes mellitus, NCHS 113-cause recode)
+  #   UCOD_LEADING == 9 (nephritis/nephrotic syndrome/nephrosis, frequent
+  #                      diabetic-kidney complication)
+  #   DIABETES == 1     (LMF flag for diabetes as a contributing cause,
+  #                      even when not the underlying cause)
   event_dm = as.integer(
     MORTSTAT == 1 &
-    UCOD_LEADING == 7 &
-    PERMTH_EXM <= 120
+    (UCOD_LEADING %in% c(7, 9) | DIABETES == 1) &
+    PERMTH_EXM <= 180
   ),
   event_dm = replace_na(event_dm, 0L),
 
   # Competing-risks indicators
-  # competing_cv: 1=CV death, 2=non-CV death, 0=censored
+  # competing_cv: 1=CV death, 2=non-CV death, 0=censored (10y frame)
   competing_cv = case_when(
     event_cv == 1                     ~ 1L,
     event_allcause == 1 & event_cv == 0 ~ 2L,
     TRUE                              ~ 0L
   ),
+  # competing_dm: 1=diabetes-related death, 2=non-diabetes death, 0=censored
+  # (15y frame, broadened diabetes definition above)
   competing_dm = case_when(
-    event_dm == 1                     ~ 1L,
-    event_allcause == 1 & event_dm == 0 ~ 2L,
-    TRUE                              ~ 0L
+    event_dm == 1                            ~ 1L,
+    event_allcause_dm == 1 & event_dm == 0   ~ 2L,
+    TRUE                                     ~ 0L
   )
 )
 
@@ -254,13 +275,21 @@ dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 saveRDS(df, "data/processed/analysis_cohort.rds")
 
 message(sprintf("\n=== Final analysis cohort: %d subjects ===", nrow(df)))
-message(sprintf("  CV deaths within 10y:        %d (%.2f%%)",
+message(sprintf("  CV deaths within 10y:                %d (%.2f%%)",
                 sum(df$event_cv), 100 * mean(df$event_cv)))
-message(sprintf("  Diabetes deaths within 10y:  %d (%.2f%%)",
+message(sprintf("  Diabetes deaths within 15y (broad):  %d (%.2f%%)",
                 sum(df$event_dm), 100 * mean(df$event_dm)))
-message(sprintf("  All-cause deaths within 10y: %d (%.2f%%)",
+message(sprintf("  All-cause deaths within 10y:         %d (%.2f%%)",
                 sum(df$event_allcause), 100 * mean(df$event_allcause)))
-message(sprintf("  Median follow-up:            %.2f years",
+message(sprintf("  All-cause deaths within 15y:         %d (%.2f%%)",
+                sum(df$event_allcause_dm), 100 * mean(df$event_allcause_dm)))
+message(sprintf("  Median follow-up (10y frame):        %.2f years",
                 median(df$followup_years)))
-message(sprintf("  Mean follow-up:              %.2f years",
+message(sprintf("  Mean follow-up (10y frame):          %.2f years",
                 mean(df$followup_years)))
+message(sprintf("  Median follow-up (15y frame, dm):    %.2f years",
+                median(df$followup_years_dm)))
+message(sprintf("  Mean follow-up (15y frame, dm):      %.2f years",
+                mean(df$followup_years_dm)))
+message("  Note: diabetes outcome uses extended 15y follow-up with broadened cause")
+message("        definition (UCOD_LEADING in {7, 9} OR DIABETES contributing-cause flag).")

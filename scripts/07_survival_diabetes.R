@@ -32,7 +32,9 @@ for (s in scores) {
   rows <- !is.na(df[[s]])
   df_s <- df[rows, ]
 
-  fgr_formula <- as.formula(sprintf("Hist(followup_years, competing_dm) ~ %s", s))
+  # Diabetes outcome uses the 15y follow-up frame and broadened cause
+  # definition built in script 03 (followup_years_dm + competing_dm).
+  fgr_formula <- as.formula(sprintf("Hist(followup_years_dm, competing_dm) ~ %s", s))
   fit <- tryCatch(
     FGR(
       fgr_formula,
@@ -45,13 +47,15 @@ for (s in scores) {
     }
   )
 
+  # Time-dependent AUC at 5y, 10y, and the 15y horizon operationalized as
+  # t=14.5 to avoid IPCW degeneracy at the 15y follow-up cap.
   roc_obj <- tryCatch(
     timeROC(
-      T      = df_s$followup_years,
+      T      = df_s$followup_years_dm,
       delta  = df_s$competing_dm,
       marker = df_s[[s]],
       cause  = 1,
-      times  = c(5, 10),
+      times  = c(5, 10, 14.5),
       weighting = "marginal",
       iid    = FALSE   # iid=TRUE OOM; bootstrap CIs deferred
     ),
@@ -64,18 +68,23 @@ for (s in scores) {
   results[[s]] <- list(rows = sum(rows), fit = fit, roc = roc_obj)
 
   if (!is.null(roc_obj)) {
-    message(sprintf("  n=%d  AUC(5y)=%.3f  AUC(10y)=%.3f",
-                    sum(rows), roc_obj$AUC_1, roc_obj$AUC_2))
+    fmt_auc <- function(x) ifelse(is.na(x), "NA", sprintf("%.3f", x))
+    message(sprintf("  n=%d  AUC(5y)=%s  AUC(10y)=%s  AUC(14.5y)=%s",
+                    sum(rows),
+                    fmt_auc(roc_obj$AUC_1[1]),
+                    fmt_auc(roc_obj$AUC_1[2]),
+                    fmt_auc(roc_obj$AUC_1[3])))
   }
 }
 
 saveRDS(results, "results/cache/dm_survival.rds")
 
 summary_tbl <- data.frame(
-  score   = scores,
-  n       = sapply(results, function(r) r$rows),
-  auc_5y  = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[1]),
-  auc_10y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC[2])
+  score     = scores,
+  n         = sapply(results, function(r) r$rows),
+  auc_5y    = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[1]),
+  auc_10y   = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[2]),
+  auc_14_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[3])
 )
 write.csv(summary_tbl, "results/dm_summary.csv", row.names = FALSE)
 
