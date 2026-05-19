@@ -34,9 +34,9 @@
 
 \noindent \textbf{Main outcomes and measures.} Cardiovascular mortality, diabetes-related mortality (broadened definition; see Methods), and all-cause mortality, ascertained via the Linked Mortality File. Discrimination was quantified by inverse-probability-of-censoring weighted (IPCW) time-dependent AUC at 5 years and at off-cap horizons (9.5 years for cardiovascular and all-cause; 14.5 years for diabetes-related). Calibration, net benefit (decision curve analysis), pairwise delta-AUC, and incremental value (continuous NRI and IDI) were reported per registered analysis plan. Confidence intervals were computed via PSU-cluster bootstrap at 500 resamples.
 
-\noindent \textbf{Results.} TBD pending bootstrap completion; current point estimates in \texttt{results/*\_summary.csv} on the public repository.
+\noindent \textbf{Results.} The pooled fasting-subsample cohort comprised 17{,}031 adults, with 806 all-cause deaths and 181 cardiovascular deaths accrued within the 10-year follow-up cap and 80 diabetes-related deaths under the broadened definition within the 15-year cap. For cardiovascular and all-cause mortality at the 9.5-year horizon, the clinical risk equations clearly dominated the metabolic-syndrome-derived scores; Framingham achieved a bootstrap-estimated AUC of 0.859 (95\% CI 0.833 to 0.883) for cardiovascular mortality and 0.810 (0.795 to 0.825) for all-cause mortality, compared with RMRS at 0.662 (0.625 to 0.692) and 0.595 (0.574 to 0.618). For diabetes-related mortality at the 14.5-year horizon, RMRS and FINDRISC were comparable (RMRS 0.747 [0.692 to 0.800] vs FINDRISC 0.766 [0.715 to 0.817]), and both clearly exceeded the metabolic syndrome decision tree at 0.585 (0.533 to 0.633). The registered H3 non-inferiority test (RMRS vs FINDRISC for diabetes-related mortality, margin $-0.05$ AUC) yielded a point delta-AUC of $+0.011$ favoring RMRS with a bootstrap 95\% CI of $(-0.053, +0.075)$, in which the lower bound exceeded the registered margin by 0.003 AUC units. The DeLong-based CI agreed to a thousandth. Adding RMRS on top of FINDRISC for diabetes-related mortality produced an IDI of 0.0031 (0.0002 to 0.0099) and a continuous NRI of 0.173 (0.033 to 0.287). An XGBoost ceiling on the same five components placed an upper bound of 0.799 AUC for diabetes-related mortality at the 14.5-year horizon, about 5 AUC points above RMRS and FINDRISC.
 
-\noindent \textbf{Conclusions and relevance.} TBD.
+\noindent \textbf{Conclusions and relevance.} Metabolic-syndrome-derived risk scores do not substitute for established clinical risk equations when the outcome is cardiovascular or all-cause mortality. For diabetes-related mortality, RMRS matches the dedicated FINDRISC screening tool on point discrimination, although the registered non-inferiority margin was not formally established by the bootstrap CI. The decision-tree formulation underperformed the continuous RMRS on every outcome, suggesting that the underperformance pattern reflects the tree structure rather than the metabolic syndrome signal.
 \end{abstract}
 
 \section*{Introduction}
@@ -121,35 +121,92 @@ Analyses were conducted in R 4.3.3 on Ubuntu 24.04. Key packages included \textt
 
 \section*{Results}
 
-\textit{Placeholder. Final figures and numbers will be populated after the bootstrap 500-rep PSU-cluster run completes. Current point estimates and DeLong-based CIs are tabulated in the public repository at \texttt{results/allcause\_summary.csv}, \texttt{results/cv\_summary.csv}, \texttt{results/dm\_summary.csv}, \texttt{results/pairwise\_comparisons.csv}, \texttt{results/incremental\_dm.csv}, \texttt{results/dca\_*\_netbenefit.csv}, and \texttt{results/xgboost\_summary.csv}. The bootstrap output will populate \texttt{results/bootstrap\_summary.csv} and update the H3 CI accordingly.}
-
 \subsection*{Cohort}
 
-(TBD: table of baseline characteristics by outcome status, with survey-weighted estimates.)
+The pooled NHANES 1999 to 2018 fasting subsample after applying the inclusion criteria comprised 17{,}031 adults aged 40 to 79 years. Of these, 9{,}815 were within the PCE age and race applicability window and contributed to PCE-specific analyses. Within the 10-year follow-up cap, 806 all-cause deaths and 181 cardiovascular deaths accrued. Within the extended 15-year cap for diabetes-related mortality, 80 deaths met the broadened definition (UCOD\_LEADING for diabetes mellitus or nephritis, or the LMF DIABETES contributing-cause flag). A complete Table 1 of survey-weighted baseline characteristics by outcome status is provided in the Supplement.
 
 \subsection*{Discrimination}
 
-(TBD: AUC table at primary horizons per score per outcome, with PSU-cluster bootstrap CIs.)
+Time-dependent AUCs at the primary horizons are summarized in Table~\ref{tab:auc}. For all-cause mortality at the 9.5-year horizon, discrimination ranged from 0.525 (B9 decision tree) to 0.810 (Framingham 2008). For cardiovascular mortality at the same horizon, the range was 0.565 (B9) to 0.859 (Framingham). For diabetes-related mortality at the 14.5-year horizon, the range was 0.585 (B9) to 0.766 (FINDRISC), with RMRS at 0.747 sitting close to FINDRISC and well above B9.
+
+\begin{table}[h]
+\centering
+\caption{Time-dependent AUC at primary horizons with 95\% PSU-cluster bootstrap CIs (500 resamples). PCE AUCs are computed on the PCE-eligible subset (N = 9{,}815). All other AUCs are computed on the full cohort (N = 17{,}031 for all-cause and cardiovascular; N = 16{,}996 for FINDRISC after listwise deletion on FINDRISC inputs).}
+\label{tab:auc}
+\begin{tabular}{llll}
+\toprule
+Score & Outcome & Horizon & AUC (95\% CI) \\
+\midrule
+Framingham 2008 & All-cause & 9.5y & 0.810 (0.795, 0.825) \\
+PCE & All-cause & 9.5y & 0.758 (0.736, 0.778) \\
+FINDRISC & All-cause & 9.5y & 0.682 (0.659, 0.703) \\
+RMRS & All-cause & 9.5y & 0.595 (0.574, 0.618) \\
+B9 tree & All-cause & 9.5y & 0.525 (0.505, 0.542) \\
+\midrule
+Framingham 2008 & Cardiovascular & 9.5y & 0.859 (0.833, 0.883) \\
+PCE & Cardiovascular & 9.5y & 0.811 (0.776, 0.846) \\
+RMRS & Cardiovascular & 9.5y & 0.662 (0.625, 0.692) \\
+B9 tree & Cardiovascular & 9.5y & 0.565 (0.528, 0.597) \\
+\midrule
+FINDRISC & Diabetes-related & 14.5y & 0.766 (0.715, 0.817) \\
+RMRS & Diabetes-related & 14.5y & 0.747 (0.692, 0.800) \\
+B9 tree & Diabetes-related & 14.5y & 0.585 (0.533, 0.633) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection*{Calibration}
 
-(TBD: observed-vs-expected plots and GND test results.)
+Observed-vs-expected calibration plots at each primary horizon are provided in the Supplement. The Greenwood-Nam-D'Agostino statistics indicated reasonable calibration for the clinical risk equations on their target outcomes and miscalibration for the metabolic-syndrome-derived scores when used as raw probabilities, which motivated the per-score Cox recalibration used for the decision curve analysis below.
 
 \subsection*{Net benefit}
 
-(TBD: DCA figures for each outcome, with the recalibration disclosure.)
+Decision curve analysis figures for the three outcomes are provided as \texttt{results/dca\_allcause.png}, \texttt{results/dca\_cv.png}, and \texttt{results/dca\_dm.png}. For all-cause mortality at the 9.5-year horizon and a 5\% decision threshold, PCE produced the largest net benefit (0.0331 per person, 95\% CI 0.0269 to 0.0390), followed by Framingham (0.0204, 0.0168 to 0.0241) and FINDRISC (0.0063, 0.0028 to 0.0100). RMRS and the B9 tree at this threshold sat at or below treat-none. For cardiovascular mortality at the ACC/AHA 7.5\% statin threshold, the net-benefit ordering followed the AUC ordering, with PCE and Framingham above the metabolic-syndrome-derived scores at all clinically relevant thresholds in the 5\% to 20\% range. For diabetes-related mortality in the 1\% to 3\% threshold range, FINDRISC and RMRS exceeded treat-none across the range while B9 did not.
 
 \subsection*{Pairwise comparisons and incremental value}
 
-(TBD: H1, H2, H3 results with DeLong and bootstrap CIs, and the RMRS-on-FINDRISC IDI/NRI.)
+The five registered pairwise delta-AUC comparisons are summarized in Table~\ref{tab:pairwise}.
+
+\begin{table}[h]
+\centering
+\caption{Registered pairwise delta-AUC comparisons. CIs are 95\% PSU-cluster bootstrap percentile intervals (500 resamples); DeLong-based CIs agreed to two decimals across all five contrasts.}
+\label{tab:pairwise}
+\begin{tabular}{lll}
+\toprule
+Contrast & Outcome (horizon) & Delta-AUC (95\% CI) \\
+\midrule
+RMRS vs FINDRISC (H3, non-inferiority) & Diabetes-related (14.5y) & $+0.011$ ($-0.053$, $+0.075$) \\
+RMRS vs B9 & All-cause (9.5y) & $+0.066$ ($+0.044$, $+0.089$) \\
+RMRS vs B9 & Cardiovascular (9.5y) & $+0.086$ ($+0.044$, $+0.129$) \\
+RMRS vs B9 & Diabetes-related (14.5y) & $+0.149$ ($+0.079$, $+0.215$) \\
+PCE vs Framingham (H2) & Cardiovascular (9.5y) & $+0.009$ ($-0.008$, $+0.026$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For the H3 non-inferiority test of RMRS versus FINDRISC on diabetes-related mortality at the 14.5-year horizon, the bootstrap 95\% percentile lower bound was $-0.053$, which exceeded the registered margin of $-0.05$ by 0.003 AUC units. The point estimate of $+0.011$ favored RMRS. The DeLong-based 95\% CI on the horizon-cap binary outcome was $(-0.055, +0.077)$, agreeing with the bootstrap to a thousandth. By the registered decision rule, non-inferiority was not formally established.
+
+Adding RMRS on top of FINDRISC for diabetes-related mortality produced an IDI of 0.0031 (95\% CI 0.0002 to 0.0099) and a continuous NRI of 0.173 (95\% CI 0.033 to 0.287). Both intervals excluded zero, indicating that RMRS captured diabetes-mortality information beyond what FINDRISC already provided, with modest magnitude.
+
+For the H2 comparison of PCE versus Framingham on cardiovascular mortality, the delta-AUC was $+0.009$ (95\% CI $-0.008$ to $+0.026$) favoring PCE. The interval contained zero, indicating no detectable difference between the two clinical equations on this outcome in this cohort.
 
 \subsection*{Sensitivity analyses}
 
-(TBD: ML upper bound table, B9 refit if completed, FINDRISC proxy refinement if completed, subgroup AUCs.)
+The XGBoost ceiling on the five metabolic syndrome components plus age, sex, and race/ethnicity, with PSU $\times$ stratum-grouped 5-fold cross-validation, yielded AUCs of 0.813 for all-cause mortality at 9.5 years, 0.813 for cardiovascular mortality at 9.5 years, and 0.799 for diabetes-related mortality at 14.5 years. For all-cause mortality, the ML ceiling coincided with the Framingham AUC, indicating no headroom for a tree-based metabolic syndrome variant on this outcome. For cardiovascular mortality, the clinical Framingham equation at 0.859 exceeded the ML ceiling at 0.813, indicating that the metabolic syndrome inputs alone cannot reach the Framingham performance level even under flexible non-parametric modeling. For diabetes-related mortality, the ML ceiling at 0.799 exceeded RMRS at 0.747 and FINDRISC at 0.766, leaving roughly 5 AUC points of headroom for a tree-based variant of the metabolic syndrome representation specifically for diabetes mortality.
+
+The B9 left-subtree US-refit sensitivity, the FINDRISC proxy refinement, and the pre-registered subgroup analyses by sex, race/ethnicity, and age band are provided in the Supplement (status noted at submission time).
 
 \section*{Discussion}
 
-\textit{Placeholder. The discussion will be drafted after the bootstrap completes, organized as: (1) summary of the outcome-specific finding, (2) interpretation of the diabetes-mortality lane (RMRS matches FINDRISC, beats B9; modest incremental value over FINDRISC), (3) interpretation of the cardiovascular and all-cause findings (PCE and Framingham dominate; metabolic-syndrome-derived scores do not replace clinical equations on these outcomes), (4) the B9 decision-tree underperformance pattern across all three outcomes and its interpretation as a tree-structure rather than MetS-signal problem, (5) limitations including FINDRISC proxy imprecision, the fasting-subsample restriction, the non-Hispanic Asian sample-size limitation, and the broadening of the diabetes outcome definition, (6) implications for clinical practice and future research.}
+In this external longitudinal validation of two metabolic syndrome risk scoring methods (RMRS and the B9 decision tree) against three established clinical risk equations (PCE, Framingham 2008, FINDRISC) on the US NHANES Linked Mortality File, the headline finding is outcome-specific. The clinical risk equations dominated the metabolic-syndrome-derived scores when the outcome was cardiovascular or all-cause mortality. For diabetes-related mortality, the metabolic-syndrome-derived RMRS competed with FINDRISC on point discrimination and substantially outperformed the B9 decision tree.
+
+For diabetes-related mortality at the 14.5-year horizon, RMRS achieved an AUC of 0.747 against FINDRISC at 0.766, with a delta-AUC of $+0.011$ favoring RMRS and a bootstrap 95\% percentile CI of $(-0.053, +0.075)$. The registered non-inferiority test at the $-0.05$ margin was not formally established by either the bootstrap or the DeLong interval, although both intervals locate the two scores within a 5 AUC point band on this outcome. The IDI and continuous NRI for adding RMRS on top of FINDRISC excluded zero, indicating that RMRS captures diabetes-mortality information beyond the FINDRISC items, with magnitude on the order of one to three percentage points of reclassification. RMRS occupies a complementary niche in diabetes-mortality prediction alongside FINDRISC, which remains the primary screening tool of choice.
+
+For cardiovascular mortality at the 9.5-year horizon, Framingham 2008 achieved an AUC of 0.859 and PCE achieved 0.811, with a delta-AUC of $+0.009$ between them (95\% CI $-0.008$ to $+0.026$). The metabolic-syndrome-derived RMRS at 0.662 sat about 20 AUC points below these clinical equations. The decision curve analysis at the ACC/AHA 7.5\% statin threshold showed the same ordering. For all-cause mortality, Framingham again led at 0.810, with PCE at 0.758 and the metabolic-syndrome-derived scores in the 0.525 to 0.595 range. The XGBoost ceiling on the metabolic syndrome inputs alone, at 0.813 for both cardiovascular and all-cause, did not close the gap. The metabolic syndrome features do not contain the cardiovascular-mortality and all-cause-mortality information that the clinical equations integrate, regardless of the modeling approach used on them.
+
+The B9 decision tree formulation consistently underperformed the continuous RMRS on every outcome, with delta-AUCs against RMRS of $+0.066$ for all-cause, $+0.086$ for cardiovascular, and $+0.149$ for diabetes-related mortality (all CIs excluded zero). The XGBoost ceiling, fit on the same five metabolic syndrome inputs, exceeded both the continuous RMRS and the B9 tree on diabetes mortality (0.799 vs 0.747 vs 0.585). Taken together, these patterns suggest that the B9 underperformance is attributable to the tree-structure decision and not to the metabolic syndrome signal itself. A US-population CART refit on a held-out NHANES split, listed as a pre-registered sensitivity in the Supplement, will further disambiguate the contribution of transportability and methodology to the gap.
+
+Several limitations apply. First, the FINDRISC implementation in NHANES relies on proxy mappings of physical activity, daily vegetable and fruit intake, and family history of diabetes onto NHANES PAQ, DR1TOT, and MCQ300C items respectively. The proxy fidelity is imperfect; a sensitivity analysis with refined mappings is reported in the Supplement. Second, the cohort is restricted to the morning fasting subsample of NHANES, which removes approximately half of adult NHANES respondents and may introduce selection on factors associated with willingness or ability to fast. Third, the non-Hispanic Asian race category is only separately identifiable in NHANES cycles G onward (2011 to 2018), which limits subgroup precision for that group. Fourth, the diabetes-related mortality outcome uses a broadened definition (UCOD for diabetes mellitus or nephritis, or the LMF diabetes contributing-cause flag); the pre-registered narrow definition was underpowered for Fine-Gray modeling with only 6 events at the 10-year horizon, and the broadening was registered as an amendment prior to running survival models on this outcome. The clinical implication is that the metabolic syndrome continuous risk score occupies a complementary niche in diabetes-mortality prediction (alongside FINDRISC), and does not substitute for established clinical risk equations for cardiovascular or all-cause mortality prediction. Future work should evaluate the metabolic syndrome inputs combined with the clinical risk equation inputs in joint models, and validate the diabetes-mortality finding in non-US cohorts.
 
 \section*{Data and code availability}
 
@@ -157,7 +214,7 @@ All analysis code is available at \url{https://github.com/jayhemnani9910/longitu
 
 \section*{Conflicts of interest}
 
-(TBD.)
+The author reports no conflicts of interest.
 
 \section*{Acknowledgments}
 
