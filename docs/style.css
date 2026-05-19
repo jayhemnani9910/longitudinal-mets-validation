@@ -1,0 +1,240 @@
+:root {
+  --bg: #fdfdfc;
+  --fg: #1c1c1b;
+  --muted: #555;
+  --accent: #0a4a6e;
+  --accent-soft: #d6e6ee;
+  --border: #d8d6d2;
+  --table-row: #f5f3ef;
+  --code-bg: #f0eee9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --fg: #e8e6e3;
+    --muted: #a8a6a2;
+    --accent: #5aa6cf;
+    --accent-soft: #1e3848;
+    --border: #2c2e32;
+    --table-row: #1c1e22;
+    --code-bg: #20232a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Charter, "Bitstream Charter", "Source Serif Pro", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.55;
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 6rem;
+}
+
+header.title {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+header.title h1 {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.85rem;
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+header.title .subtitle {
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+
+header.title .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.85rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-weight: 600;
+}
+
+.badge.neutral {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+h2 {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.25rem;
+  margin: 2.5rem 0 0.75rem;
+  letter-spacing: -0.005em;
+}
+
+h3 {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--muted);
+}
+
+p { margin: 0.5rem 0 1rem; }
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover { text-decoration: none; }
+
+ul.tldr {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+ul.tldr li {
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  position: relative;
+  border-bottom: 1px dashed var(--border);
+}
+
+ul.tldr li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+ul.tldr li:last-child { border-bottom: none; }
+
+figure {
+  margin: 1.5rem 0;
+}
+
+figure img,
+figure object {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.scroll-wrap {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.9rem;
+}
+
+table th, table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+table th {
+  font-weight: 600;
+  border-bottom: 2px solid var(--fg);
+  background: var(--bg);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--table-row);
+}
+
+table td.num, table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.callout {
+  border-left: 3px solid var(--accent);
+  padding: 0.75rem 1rem;
+  background: var(--accent-soft);
+  color: var(--fg);
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.callout strong { color: var(--accent); }
+
+.links-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.links-list li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.links-list .label {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  display: inline-block;
+  min-width: 12rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+footer.foot {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+code {
+  background: var(--code-bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.diagram-row {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 700px) {
+  .diagram-row.two-up {
+    grid-template-columns: 1fr 1fr;
+  }
+}

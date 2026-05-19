@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Longitudinal validation of MetS risk scores on NHANES</title>
+  <meta name="description" content="External longitudinal validation of two metabolic syndrome risk scoring methods (RMRS, B9 tree) against PCE, Framingham, and FINDRISC for cardiovascular, diabetes-related, and all-cause mortality in the US NHANES Linked Mortality File.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<header class="title">
+  <h1>External longitudinal validation of metabolic syndrome risk scores for cardiovascular, diabetes, and all-cause mortality in the US NHANES Linked Mortality File</h1>
+  <p class="subtitle">Pre-registered observational cohort study, NHANES 1999 to 2018 linked to the NHANES Linked Mortality File 2019 release.</p>
+  <div class="meta">
+    <span class="badge">Pre-registered</span>
+    <span class="badge neutral">Manuscript draft on origin/master</span>
+    <span class="badge neutral">Target: JAMA Network Open / npj Digital Medicine</span>
+    <span class="badge neutral">Author: Jay Hemnani</span>
+  </div>
+</header>
+
+<section id="tldr">
+  <h2>Headline finding</h2>
+  <ul class="tldr">
+    <li>For <strong>cardiovascular and all-cause mortality</strong>, the clinical risk equations (Framingham 2008, PCE) clearly dominate the metabolic-syndrome-derived scores. The XGBoost ceiling on the MetS inputs alone does not close the gap.</li>
+    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.011 favoring RMRS, 95% bootstrap CI -0.053 to +0.075) and gives modest incremental value when stacked on FINDRISC (IDI 0.0031, continuous NRI 0.173, both CIs exclude zero).</li>
+    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the same inputs exceeds both. The B9 underperformance pattern is a tree-structure problem and is not a problem of the MetS signal.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Pre-registered H3 read.</strong> The bootstrap 95% percentile lower bound at -0.053 sits 0.003 AUC units below the registered -0.05 non-inferiority margin, so the test does not formally establish non-inferiority. The DeLong-based CI agreed to a thousandth. Both intervals locate RMRS and FINDRISC within a 5 AUC point band, and the point estimate favors RMRS.
+  </div>
+</section>
+
+<section id="design">
+  <h2>Study at a glance</h2>
+  <p><strong>Cohort.</strong> Pooled NHANES 1999 to 2018 fasting subsample, adults 40 to 79 years, with non-missing values on the five metabolic syndrome components and eligible mortality linkage. N = 17,031.</p>
+  <p><strong>Outcomes.</strong> Cardiovascular mortality (10-year cap), all-cause mortality (10-year cap), diabetes-related mortality under a broadened definition combining underlying-cause diabetes mellitus, underlying-cause nephritis, and the LMF DIABETES contributing-cause flag (15-year cap). 806, 181, and 80 events respectively.</p>
+  <p><strong>Scores compared.</strong> RMRS (continuous metabolic-syndrome risk score via triangular areal similarity); B9 (decision-tree formulation of the same five components); ACC/AHA Pooled Cohort Equations (primary cardiovascular baseline); Framingham 2008 (secondary cardiovascular baseline); FINDRISC (type 2 diabetes screening baseline).</p>
+  <p><strong>Methods.</strong> Survey-weighted Fine-Gray competing-risks (cardiovascular, diabetes) and Cox proportional hazards (all-cause). Time-dependent IPCW AUC at off-cap horizons. Decision curve analysis with per-score Cox recalibration to put all five scores on a probability scale. DeLong-based delta-AUC plus 500-rep PSU-cluster bootstrap CIs. Continuous NRI and IDI. XGBoost ML ceiling with PSU x stratum grouped cross-validation.</p>
+</section>
+
+<section id="diagrams">
+  <h2>Diagrams</h2>
+
+  <figure>
+    <img src="diagrams/pipeline.svg" alt="Pipeline diagram: data flow from raw NHANES and LMF inputs through scripts 01 to 14, ending in manuscript and OSF prereg outputs.">
+    <figcaption>Pipeline. Raw NHANES and LMF inputs flow through cohort assembly, score computation, three parallel survival analyses, decision curve analysis, pairwise comparisons, and the XGBoost ML ceiling, with the 500-rep PSU-cluster bootstrap as the registered sensitivity.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="diagrams/scoring.svg" alt="Scoring diagram: 5 risk scores map from NHANES inputs to 3 mortality outcomes, with H2 and H3 contrast roles marked.">
+    <figcaption>Scoring system. The five risk scores draw on overlapping NHANES inputs and are tested against the three mortality outcomes. H2 is PCE vs Framingham on cardiovascular mortality; H3 is the RMRS non-inferiority test against FINDRISC on diabetes-related mortality at the -0.05 AUC margin.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="diagrams/structure.svg" alt="Repo directory tree: scripts, R/scores, R/utils, tests, data, results, manuscript, prereg, diagrams.">
+    <figcaption>Repository structure. Code lives in <code>scripts/</code>, <code>R/scores/</code>, and <code>R/utils/</code>. Outputs land in <code>results/</code>. The OSF pre-registration draft is in <code>prereg/</code> and the manuscript LaTeX source plus rendered PDF in <code>manuscript/</code>.</figcaption>
+  </figure>
+</section>
+
+<section id="results">
+  <h2>Headline numbers</h2>
+
+  <h3>Time-dependent AUC at primary horizons (500-rep PSU-cluster bootstrap 95% CIs)</h3>
+  <div class="scroll-wrap">
+  <table>
+    <thead>
+      <tr><th>Score</th><th>Outcome</th><th>Horizon</th><th class="num">AUC (95% CI)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Framingham 2008</td><td>All-cause</td><td>9.5y</td><td class="num">0.810 (0.795, 0.825)</td></tr>
+      <tr><td>PCE</td><td>All-cause</td><td>9.5y</td><td class="num">0.758 (0.736, 0.778)</td></tr>
+      <tr><td>FINDRISC</td><td>All-cause</td><td>9.5y</td><td class="num">0.682 (0.659, 0.703)</td></tr>
+      <tr><td>RMRS</td><td>All-cause</td><td>9.5y</td><td class="num">0.595 (0.574, 0.618)</td></tr>
+      <tr><td>B9 tree</td><td>All-cause</td><td>9.5y</td><td class="num">0.525 (0.505, 0.542)</td></tr>
+      <tr><td>Framingham 2008</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.859 (0.833, 0.883)</td></tr>
+      <tr><td>PCE</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.811 (0.776, 0.846)</td></tr>
+      <tr><td>RMRS</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.662 (0.625, 0.692)</td></tr>
+      <tr><td>B9 tree</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.565 (0.528, 0.597)</td></tr>
+      <tr><td>FINDRISC</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.766 (0.715, 0.817)</td></tr>
+      <tr><td>RMRS</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.747 (0.692, 0.800)</td></tr>
+      <tr><td>B9 tree</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.585 (0.533, 0.633)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Registered pairwise delta-AUC contrasts</h3>
+  <div class="scroll-wrap">
+  <table>
+    <thead>
+      <tr><th>Contrast</th><th>Outcome (horizon)</th><th class="num">Delta-AUC (95% CI)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.011 (-0.053, +0.075)</td></tr>
+      <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.066 (+0.044, +0.089)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.086 (+0.044, +0.129)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.149 (+0.079, +0.215)</td></tr>
+      <tr><td>PCE vs Framingham (H2)</td><td>Cardiovascular (9.5y)</td><td class="num">+0.009 (-0.008, +0.026)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>XGBoost ML ceiling on the metabolic syndrome inputs</h3>
+  <div class="scroll-wrap">
+  <table>
+    <thead>
+      <tr><th>Outcome (horizon)</th><th class="num">ML AUC</th><th class="num">Top clinical / MetS score</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>All-cause (9.5y)</td><td class="num">0.813</td><td class="num">Framingham 0.810 (no headroom)</td></tr>
+      <tr><td>Cardiovascular (9.5y)</td><td class="num">0.813</td><td class="num">Framingham 0.859 (clinical above ML)</td></tr>
+      <tr><td>Diabetes-related (14.5y)</td><td class="num">0.799</td><td class="num">FINDRISC 0.766 (5 AUC pts of headroom)</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="links">
+  <h2>Code, draft, and pre-registration</h2>
+  <ul class="links-list">
+    <li><span class="label">Source repository</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation">github.com/jayhemnani9910/longitudinal-mets-validation</a></li>
+    <li><span class="label">Manuscript PDF</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/manuscript/main.pdf">manuscript/main.pdf</a></li>
+    <li><span class="label">Pre-registration draft</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/prereg/osf-preregistration-draft.md">prereg/osf-preregistration-draft.md</a></li>
+    <li><span class="label">OSF registration</span> <span style="color: var(--muted);">pending submission</span></li>
+    <li><span class="label">Result CSVs</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/results">results/ (allcause, cv, dm, pairwise, dca, xgboost, bootstrap)</a></li>
+    <li><span class="label">Pipeline source</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/scripts">scripts/01 to 14</a></li>
+  </ul>
+</section>
+
+<section id="references">
+  <h2>Source papers</h2>
+  <p>The two metabolic syndrome risk scoring methods evaluated here come from the Shin, Oh, and Shim research line.</p>
+  <ul>
+    <li>Shin HJ, Oh J, Shim SS. A robust metabolic syndrome risk score using triangular areal similarity. <em>PeerJ Computer Science</em>, 2024. (RMRS, score B8.)</li>
+    <li>Shin HJ, Oh J, Shim SS. Machine learning predictive model for metabolic syndrome prevention. <em>PLoS ONE</em>, 2023. (B9 decision tree.)</li>
+  </ul>
+  <p>The clinical risk equation baselines come from the standard literature: Goff et al. (ACC/AHA 2014) for PCE; D'Agostino et al. (Circulation 2008) for Framingham; Lindstrom and Tuomilehto (Diabetes Care 2003) for FINDRISC.</p>
+</section>
+
+<footer class="foot">
+  <p>Last build of these numbers: bootstrap run 2026-05-19 (commit <code>c6482ce</code>), manuscript fill (commit <code>a9e6981</code>), landing-page commit (current). Implementation assisted by Claude Code (Anthropic).</p>
+</footer>
+
+</main>
+</body>
+</html>
