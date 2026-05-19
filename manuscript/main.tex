@@ -1,0 +1,169 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{authblk}
+
+\doublespacing
+\setlength{\parskip}{0.5em}
+
+\title{External longitudinal validation of metabolic syndrome risk scores for cardiovascular, diabetes, and all-cause mortality in the US NHANES Linked Mortality File}
+
+\author[1]{Jay Hemnani}
+\affil[1]{Independent researcher. Correspondence: jayhemnani992000@gmail.com.}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent \textbf{Importance.} Two metabolic syndrome risk scoring methods, a continuous score based on triangular areal similarity (RMRS) and a decision-tree formulation, have been developed and internally validated on Korean cohorts. External validation in a US cohort against established clinical risk equations, with long-term mortality outcomes, has not been reported.
+
+\noindent \textbf{Objective.} To externally validate the RMRS and the metabolic syndrome decision tree against the ACC/AHA Pooled Cohort Equations (PCE), Framingham 2008, and FINDRISC for cardiovascular, diabetes-related, and all-cause mortality in a representative US adult population.
+
+\noindent \textbf{Design, setting, and participants.} Prospective cohort using NHANES survey cycles 1999 through 2018 linked to the public-use NHANES Linked Mortality File (2019 release). Adults aged 40 to 79 years with non-missing data on the fasting metabolic syndrome components were eligible. Cohort N and exclusions reported in the Results.
+
+\noindent \textbf{Exposures.} Five risk scores computed at NHANES baseline: RMRS, the metabolic syndrome decision tree, PCE, Framingham 2008, and FINDRISC.
+
+\noindent \textbf{Main outcomes and measures.} Cardiovascular mortality, diabetes-related mortality (broadened definition; see Methods), and all-cause mortality, ascertained via the Linked Mortality File. Discrimination was quantified by inverse-probability-of-censoring weighted (IPCW) time-dependent AUC at 5 years and at off-cap horizons (9.5 years for cardiovascular and all-cause; 14.5 years for diabetes-related). Calibration, net benefit (decision curve analysis), pairwise delta-AUC, and incremental value (continuous NRI and IDI) were reported per registered analysis plan. Confidence intervals were computed via PSU-cluster bootstrap at 500 resamples.
+
+\noindent \textbf{Results.} TBD pending bootstrap completion; current point estimates in \texttt{results/*\_summary.csv} on the public repository.
+
+\noindent \textbf{Conclusions and relevance.} TBD.
+\end{abstract}
+
+\section*{Introduction}
+
+Metabolic syndrome is a clustering of central adiposity, dysglycemia, dyslipidemia, and elevated blood pressure that is associated with increased risk of cardiovascular disease, type 2 diabetes, and all-cause mortality \citep{ncepatpiii, idfmets}. Several scoring frameworks have been proposed to quantify metabolic syndrome severity on a continuous scale or via decision-tree classification, with the aim of improving prevention beyond the binary NCEP ATP III or IDF criteria.
+
+Two such frameworks have recently been developed and internally validated on Korean cohorts. The Robust Metabolic Syndrome Risk Score (RMRS) maps the five component features into a continuous risk index via triangular areal similarity \citep{shin2024rmrs}. A complementary decision-tree formulation segments the input space using the same five component features \citep{shin2023b9}. The two papers together constitute the most-cited line of research in this group's metabolic syndrome work, with the decision-tree paper being the highest-cited.
+
+External validation of these scores in a non-Asian population, against established clinical prediction equations, on long-term mortality outcomes, has not been reported. The ACC/AHA Pooled Cohort Equations \citep{goff2014pce} and the Framingham 2008 general cardiovascular risk profile \citep{dagostino2008framingham} are the primary baselines for cardiovascular risk prediction in US clinical practice. FINDRISC \citep{lindstrom2003findrisc} is the most widely used non-invasive screening tool for incident type 2 diabetes. A head-to-head longitudinal comparison on a representative US cohort would clarify the place, if any, of metabolic-syndrome-derived scores within the existing prediction-tool ecosystem.
+
+We performed this comparison using NHANES survey cycles 1999 through 2018 linked to the public-use Linked Mortality File (2019 release) \citep{nhaneslmf2019}. The analysis was pre-registered on OSF, follows TRIPOD+AI \citep{tripodai2024} and STROBE \citep{strobe2007} reporting standards, and reports discrimination, calibration, net benefit, pairwise delta-AUC, and incremental value for three mortality outcomes (cardiovascular, diabetes-related, all-cause) across all five risk scores. The registered primary non-inferiority hypothesis (H3) tested whether RMRS is non-inferior to FINDRISC for predicting diabetes-related mortality at the 14.5-year horizon, with a registered margin of $-0.05$ AUC.
+
+\section*{Methods}
+
+\subsection*{Study design and data sources}
+
+We used a prospective cohort design on the public-use NHANES survey \citep{nhaneslmf2019} cycles A through J (calendar years 1999 through 2018) linked to the National Center for Health Statistics public-use Linked Mortality File (LMF) 2019 release. Both files are de-identified, publicly available, and do not require IRB approval for secondary analysis. NHANES employs a complex multi-stage probability sample of the US civilian, non-institutionalized population with sampling stratification (\texttt{sdmvstra}), primary sampling units (\texttt{sdmvpsu}), and per-cycle survey weights. All analyses incorporated the survey design via the R \texttt{survey} package; effective survey weights were rescaled to the pooled cohort following NCHS guidance.
+
+The LMF provides mortality follow-up time in months (\texttt{PERMTH\_EXM}) and the NCHS 113-cause underlying cause-of-death recode (\texttt{UCOD\_LEADING}), plus contributing-cause flags for diabetes and hypertension.
+
+\subsection*{Participants and inclusion criteria}
+
+Eligible participants were adults aged 40 to 79 years at NHANES examination with non-missing values on the metabolic syndrome components (waist circumference, fasting glucose, HDL cholesterol, triglycerides, and blood pressure). The age window was chosen to align with the PCE applicability range. Because triglycerides and HDL are measured only in the morning fasting subsample, the cohort is restricted to fasting-subsample participants, which removes approximately half of adult NHANES respondents. The HDL column name varies across cycles (LBDHDL in cycles A and B, 1999 to 2002; LBXHDD in cycle C, 2003 to 2004; LBDHDD in cycles D onward, 2005 to 2018) and was coalesced. Race and ethnicity were coalesced from RIDRETH3 (available from cycle G, 2011 onward) and RIDRETH1 (earlier cycles), with the limitation that the non-Hispanic Asian category is not separately identifiable before cycle G.
+
+\subsection*{Risk scores}
+
+Five risk scores were computed at NHANES baseline.
+
+\emph{RMRS} \citep{shin2024rmrs} maps the five metabolic syndrome components to a continuous index via triangular areal similarity to a reference healthy point. Implementation follows the published formula without modification.
+
+\emph{Metabolic syndrome decision tree} \citep{shin2023b9} classifies subjects into terminal nodes via a published CART. The published Figure 8(A) was transcribed; the left subtree (BPWC\_add $\leq 0.66$) is implemented as a single safety-zone leaf with the published probability of $p = 0.137$. A sensitivity analysis refitting the left subtree on a held-out NHANES split was planned (see Sensitivity analyses).
+
+\emph{ACC/AHA Pooled Cohort Equations (PCE)} \citep{goff2014pce} estimate 10-year atherosclerotic cardiovascular disease risk. The four sex- and race-specific equations were implemented per the published coefficients. PCE applies to adults aged 40 to 79 without prior atherosclerotic cardiovascular disease; subjects outside this range or with missing race were excluded from PCE-specific analyses (PCE-eligible N reported in Results).
+
+\emph{Framingham 2008 general cardiovascular risk profile} \citep{dagostino2008framingham} estimates 10-year general cardiovascular risk. Coefficients from the original publication were applied.
+
+\emph{FINDRISC} \citep{lindstrom2003findrisc} is an integer screening score (range 0 to 26) for incident type 2 diabetes risk. NHANES does not collect FINDRISC items directly; the implementation maps NHANES variables onto FINDRISC items as follows. Age, BMI, and waist circumference map directly. Physical activity is approximated from the PAQ (physical activity questionnaire) items. Daily vegetable and fruit intake is approximated from DR1TOT (24-hour dietary recall). Antihypertensive medication use maps from BPQ050A. Personal history of high blood glucose maps from DIQ160. Family history of diabetes maps from MCQ300C. The proxy fidelity of these mappings is acknowledged as a study limitation; a sensitivity analysis with refined FINDRISC proxies was planned.
+
+\subsection*{Outcomes}
+
+Three mortality outcomes were defined.
+
+\emph{Cardiovascular mortality} was defined as UCOD\_LEADING values for heart diseases (codes 1 to 3) or stroke (code 5). The follow-up cap was 10 years; AUC was reported at $t = 5$ and at the off-cap horizon $t = 9.5$ years (AUC at exactly the cap is degenerate under IPCW).
+
+\emph{All-cause mortality} was defined as any death recorded in the LMF. The follow-up cap and horizons matched the cardiovascular outcome.
+
+\emph{Diabetes-related mortality} used a broadened definition: UCOD\_LEADING for diabetes mellitus (code 7), OR UCOD\_LEADING for nephritis (code 9), OR the LMF DIABETES contributing-cause flag equal to 1. The follow-up cap was extended to 15 years to accumulate adequate events under the broadened definition; AUC horizons were $t = 5$, $t = 10$, and $t = 14.5$. The pre-registered narrow definition (UCOD\_LEADING $= 7$ only) yielded 6 events at 10 years and was underpowered for Fine-Gray modeling; the broadening to include nephritis and the contributing-cause flag, plus the follow-up extension, was registered as an amendment to the OSF protocol prior to running survival models on the diabetes outcome.
+
+\subsection*{Statistical analysis}
+
+For cardiovascular and diabetes-related mortality, we modeled cumulative incidence under competing risks using survey-weighted Fine-Gray subdistribution hazards \citep{finegray1999}. For all-cause mortality, we used survey-weighted Cox proportional hazards. Time-dependent discrimination was quantified with IPCW AUC \citep{blanche2013ipcwauc} via the \texttt{timeROC} R package with \texttt{iid = FALSE} (the \texttt{iid = TRUE} setting allocates an $N \times N$ matrix that exceeds available memory at the realized cohort size; see Software note in the Supplement).
+
+Calibration was assessed via observed-vs-expected plots and the Greenwood-Nam-D'Agostino test. Net benefit was reported via decision curve analysis \citep{vickers2006dca} at clinically motivated threshold ranges (5\% to 20\% for all-cause, 5\% to 20\% for cardiovascular with the ACC/AHA 7.5\% statin threshold flagged, and 1\% to 3\% for diabetes-related). Because FINDRISC is an integer 0 to 26 score whereas the other four scores are probability-style, each score was Cox-recalibrated to a horizon-specific predicted probability before entering decision curve analysis. This per-score recalibration is reported with the net-benefit results and is necessary for cross-score comparability.
+
+For the registered pairwise comparisons (H1: RMRS vs B9 on each outcome; H2: PCE vs Framingham on cardiovascular; H3: RMRS vs FINDRISC on diabetes-related), delta-AUC point estimates were taken from the IPCW \texttt{timeROC} fit; the corresponding 95\% CIs and DeLong p-values were computed via \texttt{pROC::roc.test} on the horizon-cap binary outcome (subjects censored before the horizon were excluded from the DeLong test). Definitive confidence intervals for all primary discrimination and net-benefit quantities were computed via PSU-cluster bootstrap at 500 resamples, sampling whole \texttt{sdmvstra}~$\times$~\texttt{sdmvpsu} clusters with replacement (about 301 clusters across pooled cycles). The bootstrap distribution is the registered sensitivity for the H3 non-inferiority test against the $-0.05$ AUC margin.
+
+Incremental value of adding RMRS on top of FINDRISC for diabetes-related mortality was reported as continuous NRI \citep{pencina2008nri} and IDI, computed via \texttt{survIDINRI::IDI.INF} with 500 perturbation iterations.
+
+Multiple imputation by chained equations was used for the small number of subjects with missing values on smoking, total cholesterol, or systolic blood pressure (PCE inputs). Twenty imputations were combined using Rubin's rules.
+
+\subsection*{Sensitivity analyses}
+
+The following sensitivity analyses were pre-registered (OSF section 8) and either completed or in progress.
+
+\emph{ML upper-bound benchmark.} An XGBoost classifier trained on the five metabolic syndrome components plus age, sex, and race/ethnicity, with PSU $\times$ stratum-grouped 5-fold cross-validation, was used as a non-parametric ceiling for the achievable AUC from the same inputs. Hyperparameters were not tuned beyond defaults.
+
+\emph{B9 left-subtree refit.} A CART was refit on a held-out NHANES split to test whether the original B9 left-subtree approximation contributes to the observed B9 underperformance. (Planned; status in \texttt{prereg/osf-preregistration-draft.md}.)
+
+\emph{FINDRISC proxy refinement.} A second analysis with refined FINDRISC item proxies (improved mapping of PAQ, DR1TOT, and MCQ300C) was planned to bound the impact of proxy imprecision on the H3 result. (Planned.)
+
+\emph{Subgroup analyses.} AUC and Fine-Gray models were planned within strata defined by sex, race/ethnicity, and age band (40 to 49, 50 to 59, 60 to 69, 70 to 79 years). The non-Hispanic Asian category is reported only for cycles G onward. (Planned.)
+
+\emph{Bootstrap definitive CIs.} PSU-cluster bootstrap at 500 resamples for the focal AUCs and delta-AUCs is the registered definitive sensitivity for H3 and for all primary discrimination contrasts. (In progress at manuscript draft time.)
+
+\subsection*{Reporting standards and pre-registration}
+
+The study followed TRIPOD+AI \citep{tripodai2024} and STROBE \citep{strobe2007} reporting checklists; completed checklists are provided in the Supplement. The analysis plan was pre-registered on the Open Science Framework before any survival model was fit on the data; the registered protocol is available at the OSF identifier given in the Data and Code Availability section.
+
+\subsection*{Software}
+
+Analyses were conducted in R 4.3.3 on Ubuntu 24.04. Key packages included \texttt{survey} (NHANES design), \texttt{riskRegression} (Fine-Gray), \texttt{survival} and \texttt{rms} 6.7-1 (Cox), \texttt{timeROC} (IPCW AUC), \texttt{pROC} (DeLong delta-AUC), \texttt{dcurves} (DCA), \texttt{survIDINRI} (NRI and IDI), and \texttt{mice} (imputation). The XGBoost sensitivity used Python 3.11 with \texttt{xgboost} and \texttt{scikit-learn}. All code is available at the public repository listed in Data and Code Availability.
+
+\section*{Results}
+
+\textit{Placeholder. Final figures and numbers will be populated after the bootstrap 500-rep PSU-cluster run completes. Current point estimates and DeLong-based CIs are tabulated in the public repository at \texttt{results/allcause\_summary.csv}, \texttt{results/cv\_summary.csv}, \texttt{results/dm\_summary.csv}, \texttt{results/pairwise\_comparisons.csv}, \texttt{results/incremental\_dm.csv}, \texttt{results/dca\_*\_netbenefit.csv}, and \texttt{results/xgboost\_summary.csv}. The bootstrap output will populate \texttt{results/bootstrap\_summary.csv} and update the H3 CI accordingly.}
+
+\subsection*{Cohort}
+
+(TBD: table of baseline characteristics by outcome status, with survey-weighted estimates.)
+
+\subsection*{Discrimination}
+
+(TBD: AUC table at primary horizons per score per outcome, with PSU-cluster bootstrap CIs.)
+
+\subsection*{Calibration}
+
+(TBD: observed-vs-expected plots and GND test results.)
+
+\subsection*{Net benefit}
+
+(TBD: DCA figures for each outcome, with the recalibration disclosure.)
+
+\subsection*{Pairwise comparisons and incremental value}
+
+(TBD: H1, H2, H3 results with DeLong and bootstrap CIs, and the RMRS-on-FINDRISC IDI/NRI.)
+
+\subsection*{Sensitivity analyses}
+
+(TBD: ML upper bound table, B9 refit if completed, FINDRISC proxy refinement if completed, subgroup AUCs.)
+
+\section*{Discussion}
+
+\textit{Placeholder. The discussion will be drafted after the bootstrap completes, organized as: (1) summary of the outcome-specific finding, (2) interpretation of the diabetes-mortality lane (RMRS matches FINDRISC, beats B9; modest incremental value over FINDRISC), (3) interpretation of the cardiovascular and all-cause findings (PCE and Framingham dominate; metabolic-syndrome-derived scores do not replace clinical equations on these outcomes), (4) the B9 decision-tree underperformance pattern across all three outcomes and its interpretation as a tree-structure rather than MetS-signal problem, (5) limitations including FINDRISC proxy imprecision, the fasting-subsample restriction, the non-Hispanic Asian sample-size limitation, and the broadening of the diabetes outcome definition, (6) implications for clinical practice and future research.}
+
+\section*{Data and code availability}
+
+All analysis code is available at \url{https://github.com/jayhemnani9910/longitudinal-mets-validation} (MIT license). The OSF pre-registration is at (TBD: OSF identifier to be inserted on submission).
+
+\section*{Conflicts of interest}
+
+(TBD.)
+
+\section*{Acknowledgments}
+
+Implementation assisted by Claude Code (Anthropic).
+
+\bibliographystyle{plainnat}
+\bibliography{main}
+
+\end{document}
