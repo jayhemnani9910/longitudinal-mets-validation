@@ -239,6 +239,10 @@ Documented for OSF transparency. The deviations below are operational correction
 
 Any further deviation from this pre-registration will be documented in `prereg/deviations-log.md` in the project GitHub repository, with timestamp, reason, and impact assessment. Pre-registered analyses will be reported as planned even if deviations are also reported.
 
+## Bootstrap sensitivity results
+
+The 500-rep PSU-cluster bootstrap registered in section 9 has been run (seed 20260519, `scripts/14_bootstrap_cis.R`). For the H3 contrast (RMRS vs FINDRISC on diabetes-related mortality at t = 14.5), the bootstrap percentile interval is delta-AUC = +0.011 (95% CI -0.053 to +0.075). The lower bound is 0.003 AUC units below the registered -0.05 non-inferiority margin, so the bootstrap does not establish non-inferiority at the pre-specified margin, in agreement with the DeLong-based CI reported in section 8.3. Bootstrap percentile intervals for the other primary delta-AUCs are RMRS vs B9 on all-cause mortality at t = 9.5: +0.066 (0.044, 0.089); RMRS vs B9 on CV mortality at t = 9.5: +0.086 (0.044, 0.129); RMRS vs B9 on diabetes mortality at t = 14.5: +0.149 (0.079, 0.215); PCE vs Framingham on CV mortality at t = 9.5: +0.009 (-0.008, +0.026). Full distributions are stored at `results/bootstrap_*.rds` and `results/bootstrap_summary.csv`.
+
 ## 11. Other
 
 ### Software
