@@ -1,4 +1,4 @@
-.PHONY: all data scores analyses dca subgroups manuscript clean test
+.PHONY: all data scores analyses dca subgroups bootstrap manuscript clean test
 
 # Use --no-init-file to skip .Rprofile / renv auto-activation so that
 # the explicit .libPaths() call in each script takes effect.
@@ -34,6 +34,16 @@ subgroups:
 	$(RSCRIPT) scripts/11_subgroup_sex.R
 	$(RSCRIPT) scripts/12_subgroup_race.R
 	$(RSCRIPT) scripts/13_subgroup_age.R
+
+# Phase 8: Bootstrap sensitivity (500 PSU-cluster resamples, ~4h wall)
+# Toggle rep count via N_REPS env var. Default in script is 10 for smoke tests.
+bootstrap:
+	mkdir -p results/cache
+	N_REPS=500 $(RSCRIPT) scripts/14_bootstrap_cis.R 2>&1 | tee results/cache/bootstrap.log
+
+bootstrap-smoke:
+	mkdir -p results/cache
+	N_REPS=10 $(RSCRIPT) scripts/14_bootstrap_cis.R 2>&1 | tee results/cache/bootstrap_smoke.log
 
 # Phase 7: Manuscript
 manuscript:
