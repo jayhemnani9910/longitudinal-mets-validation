@@ -37,3 +37,8 @@ results/cache/
 manuscript/*.aux
 manuscript/*.log
 manuscript/*.out
+
+# Local-only working notes (kept on disk, not pushed)
+/CLAUDE.md
+prereg/pipeline-pause-*.md
+prereg/r-install-notes.md

@@ -2,7 +2,6 @@
 
 **Status:** Ready for OSF submission. This document serves as a transparent study protocol with the registered analysis plan and the primary results from Phase 2 and Phase 3 already computed. Pre-specified sensitivity analyses listed in section 8 remain to be run after submission.
 **Submitter:** Jay Hemnani (independent researcher; no current institutional affiliation listed)
-**Implementation assistance:** Claude Code (Anthropic) assisted with code authorship, analysis scripting, and prose drafting under the submitter's direction.
 **Anticipated submission date:** 2026-05-18
 
 ---
@@ -255,7 +254,7 @@ Repository public from project initialization. Final code release at submission 
 NHANES public-use files and the public-use NHANES Linked Mortality File are de-identified and exempt from additional IRB review. The manuscript will include this statement.
 
 ### Author and affiliation
-Jay Hemnani (independent researcher; no current institutional affiliation listed). Implementation assisted by Claude Code (Anthropic). Possible co-authors per outreach to Shin / Shim / Oh in week 7-8 of the implementation timeline.
+Jay Hemnani (independent researcher; no current institutional affiliation listed). Possible co-authors per outreach to Shin / Shim / Oh in week 7-8 of the implementation timeline.
 
 ---
 

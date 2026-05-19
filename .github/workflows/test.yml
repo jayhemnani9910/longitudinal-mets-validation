@@ -1,0 +1,43 @@
+name: R score tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'R/scores/**'
+      - 'tests/scores/**'
+      - '.github/workflows/test.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'R/scores/**'
+      - 'tests/scores/**'
+      - '.github/workflows/test.yml'
+
+jobs:
+  testthat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.3'
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-4.3.3-testthat-v1
+
+      - name: Install testthat
+        run: |
+          install.packages('testthat')
+        shell: Rscript {0}
+
+      - name: Run score tests
+        run: |
+          testthat::test_dir('tests/scores', stop_on_failure = TRUE, reporter = 'summary')
+        shell: Rscript {0}

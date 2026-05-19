@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software or analysis code, please cite it as below."
+title: "Longitudinal validation of metabolic syndrome risk scores on the NHANES Linked Mortality File"
+abstract: "External longitudinal validation of the Robust Metabolic Syndrome Risk Score (RMRS) and the metabolic syndrome decision tree against the ACC/AHA Pooled Cohort Equations, Framingham 2008, and FINDRISC for cardiovascular, diabetes-related, and all-cause mortality in NHANES 1999 to 2018 linked to the Linked Mortality File 2019 release."
+authors:
+  - family-names: Hemnani
+    given-names: Jay
+    email: jayhemnani992000@gmail.com
+type: software
+license: MIT
+url: "https://github.com/jayhemnani9910/longitudinal-mets-validation"
+repository-code: "https://github.com/jayhemnani9910/longitudinal-mets-validation"
+keywords:
+  - metabolic-syndrome
+  - NHANES
+  - linked-mortality-file
+  - clinical-prediction
+  - survival-analysis
+  - external-validation
+  - reproducible-research
+references:
+  - type: article
+    title: "A robust metabolic syndrome risk score using triangular areal similarity"
+    authors:
+      - family-names: Shin
+        given-names: Hyo Jung
+      - family-names: Oh
+        given-names: Jaeyong
+      - family-names: Shim
+        given-names: Simon S.
+    journal: "PeerJ Computer Science"
+    year: 2024
+  - type: article
+    title: "Machine learning predictive model for metabolic syndrome prevention"
+    authors:
+      - family-names: Shin
+        given-names: Hyo Jung
+      - family-names: Oh
+        given-names: Jaeyong
+      - family-names: Shim
+        given-names: Simon S.
+    journal: "PLoS ONE"
+    year: 2023

@@ -23,11 +23,11 @@
 #     same horizons used in the Phase 2 survival scripts (9.5y for allcause
 #     / CV, 14.5y for diabetes). IPCW handles right-censoring properly.
 #   * Delta-AUC inference (95% CI + DeLong p-value) is computed on the
-#     horizon-cap binary outcome via pROC::roc.test. We tried IPCW-based
-#     delta-AUC inference with timeROC iid=TRUE but it OOMs at N=17k (the
-#     CLAUDE.md tooling rule documents this). The horizon-cap pROC version
-#     loses some censoring information but is the standard fallback used
-#     in the validation literature.
+#     horizon-cap binary outcome via pROC::roc.test. IPCW-based delta-AUC
+#     inference via timeROC iid=TRUE was attempted but exceeds available
+#     memory at the realized cohort size (N=17k). The horizon-cap pROC
+#     version loses some censoring information but is the standard fallback
+#     used in the validation literature.
 #   * Horizon-cap encoding for the binary AUC: event = (delta == cause) &
 #     (followup <= horizon). Subjects censored before the horizon are
 #     excluded to avoid biased AUC estimates.
