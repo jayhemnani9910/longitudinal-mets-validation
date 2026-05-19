@@ -1,0 +1,184 @@
+direction: right
+
+vars: {
+  input-color: "#FCF3CF"
+  score-color: "#D6EAF8"
+  outcome-color: "#D5F5E3"
+  ml-color: "#FAD7A0"
+}
+
+classes: {
+  input: {
+    style: {
+      fill: ${input-color}
+      stroke: "#7D6608"
+    }
+  }
+  score: {
+    style: {
+      fill: ${score-color}
+      stroke: "#1B4F72"
+      bold: true
+    }
+    shape: rectangle
+  }
+  outcome: {
+    style: {
+      fill: ${outcome-color}
+      stroke: "#196F3D"
+    }
+  }
+  ml: {
+    style: {
+      fill: ${ml-color}
+      stroke: "#A04000"
+    }
+    shape: hexagon
+  }
+}
+
+nhanes_inputs: NHANES inputs (per subject) {
+  mets5: 5 MetS components {
+    class: input
+    waist: Waist circumference
+    glucose: Fasting glucose
+    hdl: HDL (cycle-varying column)
+    tg: Triglycerides
+    bp: Blood pressure
+  }
+
+  demog: Demographics {
+    class: input
+    age: Age (40-79)
+    sex: Sex
+    race: Race-ethnicity (RIDRETH3 coalesced with RIDRETH1)
+  }
+
+  clinical: Other clinical inputs {
+    class: input
+    tc: Total cholesterol
+    smoker: Smoking status
+    bp_meds: Antihypertensive flag
+    dm_hx: Personal high-glucose history (DIQ160)
+    fam_dm: Family history of diabetes (MCQ300C)
+    activity: Physical activity (PAQ proxy)
+    diet: Daily fruit/veg (DR1TOT proxy)
+  }
+}
+
+scores: 5 risk scores {
+  rmrs: RMRS (B8) {
+    class: score
+    note: |md
+      Continuous score via
+      triangular areal similarity
+      from the 5 MetS components
+    |
+  }
+
+  b9: B9 decision tree {
+    class: score
+    note: |md
+      CART from B9 paper,
+      left subtree as single
+      safety-zone leaf (p = 0.137)
+    |
+  }
+
+  pce: PCE (primary CV baseline) {
+    class: score
+    note: |md
+      ACC/AHA 2013 pooled
+      cohort equations,
+      4 sex- and race-specific eqs
+    |
+  }
+
+  fram: Framingham 2008 (secondary CV baseline) {
+    class: score
+    note: |md
+      General cardiovascular
+      risk profile
+    |
+  }
+
+  findrisc: FINDRISC (T2D screening baseline) {
+    class: score
+    note: |md
+      Integer 0-26 score,
+      Cox-recalibrated for DCA
+    |
+  }
+}
+
+outcomes: 3 mortality outcomes {
+  ac: All-cause (10y cap, AUC at 5y and 9.5y) {
+    class: outcome
+  }
+  cv: Cardiovascular (10y cap, AUC at 5y and 9.5y) {
+    class: outcome
+  }
+  dm: Diabetes-related (broadened: UCOD 7 + UCOD 9 + LMF flag, 15y cap, AUC at 5y, 10y, 14.5y) {
+    class: outcome
+  }
+}
+
+xgb: XGBoost ML ceiling {
+  class: ml
+  note: |md
+    5 MetS components + age, sex, race.
+    PSU x stratum 5-fold GroupKFold.
+    Default hyperparameters.
+  |
+}
+
+nhanes_inputs.mets5 -> scores.rmrs
+nhanes_inputs.mets5 -> scores.b9
+nhanes_inputs.mets5 -> xgb
+nhanes_inputs.demog -> xgb
+
+nhanes_inputs.demog -> scores.pce
+nhanes_inputs.clinical.tc -> scores.pce
+nhanes_inputs.clinical.smoker -> scores.pce
+nhanes_inputs.clinical.bp_meds -> scores.pce
+nhanes_inputs.mets5.bp -> scores.pce
+nhanes_inputs.mets5.hdl -> scores.pce
+
+nhanes_inputs.demog -> scores.fram
+nhanes_inputs.clinical.tc -> scores.fram
+nhanes_inputs.clinical.smoker -> scores.fram
+nhanes_inputs.clinical.bp_meds -> scores.fram
+nhanes_inputs.mets5.bp -> scores.fram
+nhanes_inputs.mets5.hdl -> scores.fram
+
+nhanes_inputs.demog -> scores.findrisc
+nhanes_inputs.mets5.waist -> scores.findrisc
+nhanes_inputs.clinical.bp_meds -> scores.findrisc
+nhanes_inputs.clinical.dm_hx -> scores.findrisc
+nhanes_inputs.clinical.fam_dm -> scores.findrisc
+nhanes_inputs.clinical.activity -> scores.findrisc
+nhanes_inputs.clinical.diet -> scores.findrisc
+
+scores.rmrs -> outcomes.ac: tested
+scores.rmrs -> outcomes.cv: tested
+scores.rmrs -> outcomes.dm: tested (H3 vs FINDRISC, NI margin -0.05)
+
+scores.b9 -> outcomes.ac: tested
+scores.b9 -> outcomes.cv: tested
+scores.b9 -> outcomes.dm: tested
+
+scores.pce -> outcomes.cv: primary CV baseline (H2 vs Framingham)
+scores.pce -> outcomes.ac: tested
+scores.pce -> outcomes.dm: exploratory cross-purpose
+
+scores.fram -> outcomes.cv: secondary CV baseline
+scores.fram -> outcomes.ac: tested
+scores.fram -> outcomes.dm: exploratory cross-purpose
+
+scores.findrisc -> outcomes.dm: primary diabetes baseline (H3 partner)
+scores.findrisc -> outcomes.ac: tested
+scores.findrisc -> outcomes.cv: exploratory cross-purpose
+
+xgb -> outcomes.ac: ML upper bound
+xgb -> outcomes.cv: ML upper bound
+xgb -> outcomes.dm: ML upper bound (5 AUC pts of headroom)

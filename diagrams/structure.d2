@@ -1,0 +1,162 @@
+direction: right
+
+vars: {
+  dir-color: "#D6EAF8"
+  code-color: "#FCF3CF"
+  test-color: "#D5F5E3"
+  data-color: "#FADBD8"
+  result-color: "#E8DAEF"
+  doc-color: "#F2F3F4"
+}
+
+classes: {
+  dir: {
+    style: {
+      fill: ${dir-color}
+      stroke: "#1B4F72"
+      bold: true
+    }
+  }
+  code: {
+    style: {
+      fill: ${code-color}
+      stroke: "#7D6608"
+    }
+  }
+  test: {
+    style: {
+      fill: ${test-color}
+      stroke: "#196F3D"
+    }
+  }
+  data: {
+    style: {
+      fill: ${data-color}
+      stroke: "#922B21"
+    }
+  }
+  result: {
+    style: {
+      fill: ${result-color}
+      stroke: "#5B2C6F"
+    }
+  }
+  doc: {
+    style: {
+      fill: ${doc-color}
+      stroke: "#566573"
+    }
+  }
+}
+
+root: longitudinal-mets-validation/ {
+  class: dir
+
+  scripts: scripts/ {
+    class: dir
+    s01_10: 01..10 pipeline (R + Python) {
+      class: code
+    }
+    s14: 14_bootstrap_cis.R {
+      class: code
+    }
+  }
+
+  R: R/ {
+    class: dir
+    R_scores: R/scores/ {
+      class: dir
+      rmrs: rmrs.R {
+        class: code
+      }
+      b9_tree: b9_tree.R {
+        class: code
+      }
+      b9_features: b9_features.R {
+        class: code
+      }
+      pce: pce.R {
+        class: code
+      }
+      framingham: framingham.R {
+        class: code
+      }
+      findrisc: findrisc.R {
+        class: code
+      }
+    }
+    R_utils: R/utils/ {
+      class: dir
+      load_nhanes: load_nhanes.R {
+        class: code
+      }
+      survey_design: survey_design.R {
+        class: code
+      }
+    }
+  }
+
+  tests: tests/scores/ {
+    class: dir
+    test_files: 5 testthat files (one per score) {
+      class: test
+    }
+  }
+
+  data: data/ {
+    class: dir
+    raw: raw/ (gitignored) {
+      class: data
+    }
+    processed: processed/ (gitignored, regeneratable) {
+      class: data
+    }
+  }
+
+  results: results/ {
+    class: dir
+    summaries: *_summary.csv (allcause, cv, dm, xgboost, bootstrap) {
+      class: result
+    }
+    dca_files: dca_*_netbenefit.csv + dca_*.png + dca_*.rds {
+      class: result
+    }
+    pairwise_files: pairwise_comparisons + incremental_dm + bootstrap distributions {
+      class: result
+    }
+    cache: cache/ (logs) {
+      class: result
+    }
+  }
+
+  manuscript: manuscript/ {
+    class: dir
+    main_tex: main.tex {
+      class: doc
+    }
+    main_bib: main.bib {
+      class: doc
+    }
+    main_pdf: main.pdf (14 pages) {
+      class: doc
+    }
+  }
+
+  prereg: prereg/ {
+    class: dir
+    osf_draft: osf-preregistration-draft.md {
+      class: doc
+    }
+  }
+
+  diagrams: diagrams/ {
+    class: dir
+    d2_files: pipeline + structure + scoring d2 sources and SVGs {
+      class: doc
+    }
+  }
+
+  env_files: env / build files (Makefile, renv.lock, pyproject.toml, uv.lock, DESCRIPTION, LICENSE) {
+    class: code
+  }
+}

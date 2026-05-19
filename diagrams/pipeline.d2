@@ -1,0 +1,195 @@
+direction: down
+
+vars: {
+  raw-color: "#E8DAEF"
+  proc-color: "#D4E6F1"
+  script-color: "#FCF3CF"
+  result-color: "#D5F5E3"
+  sensitivity-color: "#FAD7A0"
+}
+
+classes: {
+  raw: {
+    style: {
+      fill: ${raw-color}
+      stroke: "#5B2C6F"
+    }
+  }
+  processed: {
+    style: {
+      fill: ${proc-color}
+      stroke: "#1B4F72"
+    }
+  }
+  script: {
+    style: {
+      fill: ${script-color}
+      stroke: "#7D6608"
+      font-color: "#000"
+    }
+    shape: rectangle
+  }
+  result: {
+    style: {
+      fill: ${result-color}
+      stroke: "#196F3D"
+    }
+  }
+  sensitivity: {
+    style: {
+      fill: ${sensitivity-color}
+      stroke: "#A04000"
+    }
+    shape: rectangle
+  }
+}
+
+phase1: Phase 1 - Data and scores {
+  nhanes_api: NHANES public API (nhanesA) {
+    class: raw
+    shape: cloud
+  }
+  lmf_zip: LMF 2019 public-use fwf {
+    class: raw
+    shape: cloud
+  }
+
+  s01: 01_download_nhanes.R {
+    class: script
+  }
+  s02: 02_link_mortality.R {
+    class: script
+  }
+  s03: 03_apply_inclusion.R {
+    class: script
+  }
+  s04: 04_compute_scores.R {
+    class: script
+  }
+
+  raw_nhanes: data/raw/nhanes_*.rds {
+    class: processed
+    shape: page
+  }
+  raw_lmf: data/raw/lmf.rds {
+    class: processed
+    shape: page
+  }
+  cohort_pre: data/processed/cohort_pre_inclusion.rds {
+    class: processed
+    shape: page
+  }
+  cohort: data/processed/cohort.rds {
+    class: processed
+    shape: page
+  }
+  cohort_scores: data/processed/cohort_with_scores.rds {
+    class: processed
+    shape: page
+  }
+
+  rscores: R/scores/*.R (5 score implementations) {
+    class: script
+  }
+
+  nhanes_api -> s01 -> raw_nhanes
+  lmf_zip -> s02
+  raw_nhanes -> s02 -> raw_lmf
+  raw_nhanes -> s02 -> cohort_pre
+  cohort_pre -> s03 -> cohort: applies fasting + age 40-79 + HDL coalesce + broadened DM outcome + 15y DM follow-up
+  cohort -> s04
+  rscores -> s04 -> cohort_scores
+}
+
+phase2: Phase 2 - Survival analyses {
+  s05: 05_survival_allcause.R (Cox 9.5y) {
+    class: script
+  }
+  s06: 06_survival_cv.R (Fine-Gray 9.5y) {
+    class: script
+  }
+  s07: 07_survival_diabetes.R (Fine-Gray 14.5y) {
+    class: script
+  }
+  s07b: 07b_calibration.R {
+    class: script
+  }
+
+  ac_summary: results/allcause_summary.csv {
+    class: result
+    shape: page
+  }
+  cv_summary: results/cv_summary.csv {
+    class: result
+    shape: page
+  }
+  dm_summary: results/dm_summary.csv {
+    class: result
+    shape: page
+  }
+  calib_plots: results/plots/calibration_*.png {
+    class: result
+    shape: page
+  }
+}
+
+phase3: Phase 3 - Net benefit, pairwise, ML ceiling {
+  s08: 08_dca.R (per-score Cox recalibration) {
+    class: script
+  }
+  s09: 09_pairwise_comparisons.R (DeLong + IDI + NRI) {
+    class: script
+  }
+  s10: 10_xgboost_sensitivity.py (sdmvstra x sdmvpsu GroupKFold) {
+    class: script
+  }
+
+  dca_outs: results/dca_*_netbenefit.csv + dca_*.png + dca_*.rds {
+    class: result
+    shape: page
+  }
+  pairwise_outs: results/pairwise_comparisons.csv + incremental_dm.csv {
+    class: result
+    shape: page
+  }
+  xgb_outs: results/xgboost_summary.csv + xgboost_*.txt {
+    class: result
+    shape: page
+  }
+}
+
+phase4: Phase 4 - Bootstrap sensitivity (500 reps) {
+  s14: 14_bootstrap_cis.R (PSU-cluster bootstrap) {
+    class: sensitivity
+  }
+
+  boot_outs: results/bootstrap_* (summary csv + distributions rds + log) {
+    class: result
+    shape: page
+  }
+}
+
+phase1.cohort_scores -> phase2.s05 -> phase2.ac_summary
+phase1.cohort_scores -> phase2.s06 -> phase2.cv_summary
+phase1.cohort_scores -> phase2.s07 -> phase2.dm_summary
+phase1.cohort_scores -> phase2.s07b -> phase2.calib_plots
+
+phase1.cohort_scores -> phase3.s08 -> phase3.dca_outs
+phase1.cohort_scores -> phase3.s09 -> phase3.pairwise_outs
+phase1.cohort_scores -> phase3.s10 -> phase3.xgb_outs
+
+phase1.cohort_scores -> phase4.s14 -> phase4.boot_outs
+
+phase4.boot_outs -> manuscript_supp: feeds OSF prereg addendum + manuscript Results
+
+manuscript_supp: manuscript/main.tex + prereg/osf-preregistration-draft.md {
+  class: result
+  shape: document
+}
+
+phase2.ac_summary -> manuscript_supp
+phase2.cv_summary -> manuscript_supp
+phase2.dm_summary -> manuscript_supp
+phase3.dca_outs -> manuscript_supp
+phase3.pairwise_outs -> manuscript_supp
+phase3.xgb_outs -> manuscript_supp
