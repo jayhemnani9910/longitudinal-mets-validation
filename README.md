@@ -13,7 +13,7 @@ Outcome-specific value.
 
 - For **cardiovascular and all-cause mortality**, the established clinical risk equations dominate. Framingham 2008 reaches AUC 0.858 at 9.5 years for cardiovascular mortality and 0.810 for all-cause; the metabolic-syndrome-derived RMRS lands at 0.660 and 0.600 respectively.
 - For **diabetes-related mortality**, RMRS competes head-to-head with FINDRISC at 14.5 years (AUC 0.752 vs 0.770; delta-AUC +0.014 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (continuous NRI 0.139, IDI 0.0042, both CIs exclude zero). The FINDRISC comparator uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.
-- The **B9 decision tree** is consistently outperformed by the continuous RMRS on every outcome (delta-AUC +0.071 all-cause, +0.093 cardiovascular, +0.158 diabetes-related; all CIs exclude zero). An XGBoost ceiling on the same five MetS inputs exceeds both, indicating the underperformance is a tree-structure problem rather than a MetS-signal problem.
+- The **B9 decision tree** is consistently outperformed by the continuous RMRS on every outcome (delta-AUC +0.071 all-cause, +0.093 cardiovascular, +0.158 diabetes-related; all CIs exclude zero). An XGBoost ceiling on the same five MetS inputs exceeds both (diabetes-related 0.828), so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783, above RMRS on the same held-out subjects), which places the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.
 
 ## At a glance
 

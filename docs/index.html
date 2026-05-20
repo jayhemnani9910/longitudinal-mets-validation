@@ -26,7 +26,7 @@
   <ul class="tldr">
     <li>For <strong>cardiovascular and all-cause mortality</strong>, the clinical risk equations (Framingham 2008, PCE) clearly dominate the metabolic-syndrome-derived scores. The XGBoost ceiling on the MetS inputs alone does not close the gap.</li>
     <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.014 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
-    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the same inputs exceeds both. The B9 underperformance pattern is a tree-structure problem and is not a problem of the MetS signal.</li>
+    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the same inputs exceeds both, so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783), placing the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.</li>
   </ul>
 
   <div class="callout">

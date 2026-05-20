@@ -1,0 +1,141 @@
+#!/usr/bin/env Rscript
+# scripts/13_subgroups.R
+#
+# Pre-registered subgroup analyses (OSF section 8): time-dependent AUC at the
+# primary horizon within strata of sex, race/ethnicity, and age band, for the
+# primary score-outcome pairs. AUC is IPCW-corrected (timeROC, cause = 1 for the
+# competing-risk outcomes) on the same cohorts as the main analysis. Strata with
+# fewer than 10 events are reported as NA with their event count, since IPCW AUC
+# is unstable below that.
+#
+# Inputs:  data/processed/cohort_with_scores.rds
+# Outputs: results/subgroup_auc.csv
+
+.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+
+suppressMessages({
+  library(survival)
+  library(timeROC)
+  library(dplyr)
+})
+
+df       <- readRDS("data/processed/cohort_with_scores.rds")
+df_cause <- df[df$cause_coded, ]
+
+df$age_band       <- cut(df$age, breaks = c(20, 40, 50, 60, 70, 80),
+                         right = FALSE,
+                         labels = c("20-39", "40-49", "50-59", "60-69", "70-79"))
+df_cause$age_band <- cut(df_cause$age, breaks = c(20, 40, 50, 60, 70, 80),
+                         right = FALSE,
+                         labels = c("20-39", "40-49", "50-59", "60-69", "70-79"))
+
+score_labels <- c(rmrs_score = "RMRS", b9_score = "B9 tree", pce_score = "PCE",
+                  framingham_score = "Framingham", findrisc_score = "FINDRISC")
+
+# Primary score-outcome pairs to profile across subgroups.
+outcomes <- list(
+  allcause = list(data = df, time = "followup_years", delta = "event_allcause",
+                  horizon = 9.5, scores = c("framingham_score", "rmrs_score")),
+  cv       = list(data = df_cause, time = "followup_years", delta = "competing_cv",
+                  horizon = 9.5, scores = c("pce_score", "framingham_score", "rmrs_score")),
+  dm       = list(data = df_cause, time = "followup_years_dm", delta = "competing_dm",
+                  horizon = 14.5, scores = c("rmrs_score", "findrisc_score"))
+)
+
+subgroup_vars <- c("sex", "race", "age_band")
+
+auc_for <- function(d, score, time, delta, horizon) {
+  ok <- !is.na(d[[score]]) & !is.na(d[[time]]) & !is.na(d[[delta]])
+  d  <- d[ok, ]
+  n  <- nrow(d)
+  events <- sum(d[[delta]] == 1)
+  if (events < 10 || n < 50) return(list(n = n, events = events, auc = NA_real_))
+  roc <- tryCatch(
+    timeROC(T = d[[time]], delta = d[[delta]], marker = d[[score]],
+            cause = 1, times = c(horizon), weighting = "marginal", iid = FALSE),
+    error = function(e) NULL)
+  if (is.null(roc)) return(list(n = n, events = events, auc = NA_real_))
+  # timeROC prepends t=0 (AUC = NA) when a single horizon is requested, so take
+  # the last element, which corresponds to the requested horizon. Competing-risk
+  # fits expose AUC_1; two-state fits expose AUC.
+  vec <- if (!is.null(roc$AUC_1)) roc$AUC_1 else roc$AUC
+  auc <- vec[length(vec)]
+  list(n = n, events = events, auc = as.numeric(auc))
+}
+
+rows <- list()
+for (out_name in names(outcomes)) {
+  out <- outcomes[[out_name]]
+  for (v in subgroup_vars) {
+    levs <- levels(factor(out$data[[v]]))
+    for (lev in levs) {
+      d_sub <- out$data[!is.na(out$data[[v]]) & out$data[[v]] == lev, ]
+      for (s in out$scores) {
+        r <- auc_for(d_sub, s, out$time, out$delta, out$horizon)
+        rows[[length(rows) + 1]] <- data.frame(
+          outcome      = out_name,
+          score        = score_labels[s],
+          subgroup_var = v,
+          subgroup     = lev,
+          n            = r$n,
+          events       = r$events,
+          horizon_y    = out$horizon,
+          auc          = if (is.na(r$auc)) NA else round(r$auc, 3)
+        )
+      }
+    }
+  }
+}
+
+tab <- do.call(rbind, rows)
+write.csv(tab, "results/subgroup_auc.csv", row.names = FALSE)
+message("\n=== Subgroup AUCs ===")
+print(tab, row.names = FALSE)
+
+# LaTeX fragment: diabetes-related H3 pair (RMRS vs FINDRISC) across subgroups
+# with an estimable AUC. This is the pre-registered primary contrast, so it is
+# the one promoted into the manuscript; the full grid lives in the CSV.
+dm <- tab[tab$outcome == "dm", ]
+wide <- reshape(dm[, c("subgroup_var", "subgroup", "score", "events", "auc")],
+                idvar = c("subgroup_var", "subgroup"), timevar = "score",
+                direction = "wide")
+keep <- !(is.na(wide$auc.RMRS) & is.na(wide$auc.FINDRISC))
+wide <- wide[keep, ]
+var_label <- c(sex = "Sex", race = "Race/ethnicity", age_band = "Age band")
+level_label <- c(male = "Male", female = "Female",
+                 MexicanAm = "Mexican American", OtherHisp = "Other Hispanic",
+                 NHWhite = "Non-Hispanic White", NHBlack = "Non-Hispanic Black",
+                 NHAsian = "Non-Hispanic Asian", Other = "Other")
+relabel <- function(x) ifelse(x %in% names(level_label), level_label[x], x)
+
+con <- file("manuscript/subgroup_dm.tex", "w")
+wl  <- function(...) writeLines(paste0(...), con)
+wl("% Auto-generated by scripts/13_subgroups.R. Do not edit by hand.")
+wl("\\begin{table}[h]")
+wl("\\centering")
+wl("\\caption{Pre-registered subgroup time-dependent AUC for the diabetes-related ",
+   "mortality H3 contrast (RMRS versus FINDRISC) at 14.5 years, within strata of ",
+   "sex, race/ethnicity, and age band (1999 to 2014 cause-coded subcohort). Strata ",
+   "with fewer than 10 diabetes-related deaths are omitted because IPCW AUC is ",
+   "unstable below that count; the omitted strata include non-Hispanic Asian ",
+   "(available only from the 2011 cycle onward) and the youngest age bands. The ",
+   "full grid across all outcomes is in \\texttt{results/subgroup\\_auc.csv}.}")
+wl("\\label{tab:subgroup-dm}")
+wl("\\begin{tabular}{llccc}")
+wl("\\toprule")
+wl("Stratum & Level & Events & RMRS AUC & FINDRISC AUC \\\\")
+wl("\\midrule")
+last_var <- ""
+for (i in seq_len(nrow(wide))) {
+  vlab <- if (wide$subgroup_var[i] != last_var) var_label[wide$subgroup_var[i]] else ""
+  last_var <- wide$subgroup_var[i]
+  ev <- ifelse(is.na(wide$events.RMRS[i]), wide$events.FINDRISC[i], wide$events.RMRS[i])
+  fa <- function(x) ifelse(is.na(x), "--", sprintf("%.3f", x))
+  wl(sprintf("%s & %s & %d & %s & %s \\\\",
+             vlab, relabel(wide$subgroup[i]), ev, fa(wide$auc.RMRS[i]), fa(wide$auc.FINDRISC[i])))
+}
+wl("\\bottomrule")
+wl("\\end{tabular}")
+wl("\\end{table}")
+close(con)
+message("Wrote manuscript/subgroup_dm.tex")
