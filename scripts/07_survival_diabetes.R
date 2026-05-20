@@ -19,8 +19,18 @@ suppressMessages({
   library(dplyr)
 })
 
+source("R/utils/survival_helpers.R")
+
 message("Loading cohort with scores ...")
 df <- readRDS("data/processed/cohort_with_scores.rds")
+
+# Diabetes-as-underlying-cause coding is suppressed in the 2015-2018 public-use
+# file, so cause-specific diabetes mortality is restricted to cycles with full
+# leading-cause coding (1999-2014). The broadened definition still uses the
+# DIABETES contributing-cause flag within those cycles.
+df <- df[df$cause_coded, ]
+df$cluster_id <- paste(df$sdmvstra, df$sdmvpsu, sep = "_")
+message(sprintf("  Cause-coded cohort N = %d", nrow(df)))
 
 scores <- c("rmrs_score", "b9_score", "findrisc_score")
 
@@ -32,20 +42,11 @@ for (s in scores) {
   rows <- !is.na(df[[s]])
   df_s <- df[rows, ]
 
-  # Diabetes outcome uses the 15y follow-up frame and broadened cause
-  # definition built in script 03 (followup_years_dm + competing_dm).
-  fgr_formula <- as.formula(sprintf("Hist(followup_years_dm, competing_dm) ~ %s", s))
-  fit <- tryCatch(
-    FGR(
-      fgr_formula,
-      data  = df_s,
-      cause = 1
-    ),
-    error = function(e) {
-      message(sprintf("  FGR failed: %s", e$message))
-      NULL
-    }
-  )
+  # Survey-weighted Fine-Gray on the 15y frame and broadened cause definition
+  # built in script 03 (followup_years_dm + competing_dm).
+  fg <- weighted_finegray_hr(df_s, s, "followup_years_dm", "competing_dm",
+                             "wt_mec", "cluster_id", cause = 1)
+  fit <- fg
 
   # Time-dependent AUC at 5y, 10y, and the 15y horizon operationalized as
   # t=14.5 to avoid IPCW degeneracy at the 15y follow-up cap.
@@ -69,11 +70,12 @@ for (s in scores) {
 
   if (!is.null(roc_obj)) {
     fmt_auc <- function(x) ifelse(is.na(x), "NA", sprintf("%.3f", x))
-    message(sprintf("  n=%d  AUC(5y)=%s  AUC(10y)=%s  AUC(14.5y)=%s",
+    message(sprintf("  n=%d  AUC(5y)=%s  AUC(10y)=%s  AUC(14.5y)=%s  wFG HR=%s",
                     sum(rows),
                     fmt_auc(roc_obj$AUC_1[1]),
                     fmt_auc(roc_obj$AUC_1[2]),
-                    fmt_auc(roc_obj$AUC_1[3])))
+                    fmt_auc(roc_obj$AUC_1[3]),
+                    ifelse(is.na(fg$hr), "NA", sprintf("%.3f (%.3f, %.3f)", fg$hr, fg$lo, fg$hi))))
   }
 }
 
@@ -84,7 +86,10 @@ summary_tbl <- data.frame(
   n         = sapply(results, function(r) r$rows),
   auc_5y    = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[1]),
   auc_10y   = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[2]),
-  auc_14_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[3])
+  auc_14_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[3]),
+  wfg_hr    = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$hr),
+  wfg_lo    = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$lo),
+  wfg_hi    = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$hi)
 )
 write.csv(summary_tbl, "results/dm_summary.csv", row.names = FALSE)
 

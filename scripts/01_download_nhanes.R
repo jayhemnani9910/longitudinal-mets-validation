@@ -30,10 +30,11 @@ required_tables <- c(
   "TRIGLY", # triglycerides (fasting subsample)
   "HDL",    # HDL cholesterol
   "TCHOL",  # total cholesterol (for PCE + Framingham)
-  "MCQ",    # medical conditions (prior CVD)
-  "DIQ",    # diabetes questionnaire (prior T2D)
+  "MCQ",    # medical conditions (prior CVD, family history of diabetes)
+  "DIQ",    # diabetes questionnaire (prior T2D, prediabetes history)
   "SMQ",    # smoking
-  "BPQ"     # BP/cholesterol questionnaire (medication)
+  "BPQ",    # BP/cholesterol questionnaire (medication)
+  "PAQ"     # physical activity questionnaire (FINDRISC activity item)
 )
 
 dir.create("data/raw/nhanes", recursive = TRUE, showWarnings = FALSE)

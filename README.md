@@ -11,19 +11,19 @@ External longitudinal validation of two metabolic syndrome risk scoring methods 
 
 Outcome-specific value.
 
-- For **cardiovascular and all-cause mortality**, the established clinical risk equations dominate. Framingham 2008 reaches AUC 0.859 at 9.5 years for cardiovascular mortality and 0.810 for all-cause; the metabolic-syndrome-derived RMRS lands at 0.662 and 0.595 respectively.
-- For **diabetes-related mortality**, RMRS competes head-to-head with FINDRISC at 14.5 years (AUC 0.747 vs 0.766; delta-AUC +0.011 favoring RMRS, 95% bootstrap CI -0.053 to +0.075) and gives modest incremental value when stacked on FINDRISC (continuous NRI 0.173, IDI 0.0031, both CIs exclude zero).
-- The **B9 decision tree** is consistently outperformed by the continuous RMRS on every outcome (delta-AUC +0.066 all-cause, +0.086 cardiovascular, +0.149 diabetes-related; all CIs exclude zero). An XGBoost ceiling on the same five MetS inputs exceeds both, indicating the underperformance is a tree-structure problem rather than a MetS-signal problem.
+- For **cardiovascular and all-cause mortality**, the established clinical risk equations dominate. Framingham 2008 reaches AUC 0.858 at 9.5 years for cardiovascular mortality and 0.810 for all-cause; the metabolic-syndrome-derived RMRS lands at 0.660 and 0.600 respectively.
+- For **diabetes-related mortality**, RMRS competes head-to-head with FINDRISC at 14.5 years (AUC 0.752 vs 0.770; delta-AUC +0.014 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (continuous NRI 0.139, IDI 0.0042, both CIs exclude zero). The FINDRISC comparator uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.
+- The **B9 decision tree** is consistently outperformed by the continuous RMRS on every outcome (delta-AUC +0.071 all-cause, +0.093 cardiovascular, +0.158 diabetes-related; all CIs exclude zero). An XGBoost ceiling on the same five MetS inputs exceeds both, indicating the underperformance is a tree-structure problem rather than a MetS-signal problem.
 
 ## At a glance
 
 | Item | Value |
 |------|-------|
 | Data source | NHANES 1999 to 2018 + Linked Mortality File 2019 release |
-| Cohort N | 17,031 adults aged 40 to 79 years (fasting subsample) |
-| Outcomes | cardiovascular (n=181), diabetes-related (n=80, broadened), all-cause (n=806) mortality |
+| Cohort N | 17,031 adults aged 20 to 79 years (fasting subsample); 13,836 in the 1999 to 2014 cause-coded subcohort for CV and diabetes outcomes |
+| Outcomes | all-cause (n=806, full cohort), cardiovascular (n=173), diabetes-related (n=77, broadened) mortality |
 | Scores tested | RMRS, B9 tree, ACC/AHA PCE, Framingham 2008, FINDRISC |
-| Inference | survey-weighted Fine-Gray competing risks + Cox; IPCW time-dependent AUC; DCA with per-score Cox recalibration; 500-rep PSU-cluster bootstrap |
+| Inference | survey-weighted Fine-Gray competing risks + Cox; IPCW time-dependent AUC; competing-risks DCA with Fine-Gray CIF recalibration; 500-rep PSU-cluster bootstrap |
 | Target venue | JAMA Network Open / npj Digital Medicine |
 
 Full results in `results/*_summary.csv`. Rendered manuscript at [`manuscript/main.pdf`](manuscript/main.pdf). Pre-registered analysis plan at [`prereg/osf-preregistration-draft.md`](prereg/osf-preregistration-draft.md).

@@ -92,15 +92,15 @@ df$framingham_score <- ifelse(
 
 # ---- FINDRISC --------------------------------------------------------------
 message("Computing FINDRISC ...")
-# Use simple proxies for NHANES variables not directly captured:
-#   physical_active: would come from PAQ; for now FALSE (most NHANES adults)
-#   daily_vegetables: would come from DR1TOT; for now FALSE
-#   family_history_dm: would come from MCQ300C; for now "none"
-# These proxies will be refined in a future iteration (Phase 6 sensitivity).
-df$physical_active <- FALSE
+# FINDRISC inputs are derived from NHANES in scripts/03_apply_inclusion.R:
+#   family_history_dm   <- MCQ300C (cycles D+; none earlier)
+#   prior_high_glucose  <- DIQ160 self-report OR measured impaired fasting glucose
+#   physical_active     <- PAQ (>=150 min/week moderate-to-vigorous; FALSE if absent)
+# The vegetable/fruit item is the one FINDRISC dimension NHANES does not carry
+# in a cycle-consistent form, so daily_vegetables is held at the no-credit
+# default and noted as a limitation.
+if (!"physical_active" %in% names(df)) df$physical_active <- FALSE
 df$daily_vegetables <- FALSE
-df$family_history_dm <- "none"
-df$prior_high_glucose <- df$prior_t2d  # use prior T2D as proxy
 
 df$findrisc_score <- mapply(
   findrisc,

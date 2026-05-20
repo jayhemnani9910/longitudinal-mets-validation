@@ -135,10 +135,13 @@ delong_paired <- function(df_p, marker1, marker2, time_col, delta_col,
                 auc2 = as.numeric(pROC::auc(r2))))
   }
   delta_v <- as.numeric(cmp$estimate[1] - cmp$estimate[2])
-  # roc.test returns CI for the difference if computed; otherwise build it.
-  # pROC::roc.test stores the difference SE in cmp$statistic / cmp$z; reverse.
-  z <- as.numeric(cmp$statistic)
-  se <- if (!is.na(z) && z != 0) abs(delta_v) / abs(z) else NA_real_
+  # DeLong variance of the AUC difference: Var(A1) + Var(A2) - 2 Cov(A1, A2).
+  # Computed directly from the ROC objects so it stays stable when the point
+  # difference is near zero (the earlier |delta|/|z| reconstruction collapsed
+  # toward a zero SE there).
+  v <- tryCatch(pROC::var(r1) + pROC::var(r2) - 2 * pROC::cov(r1, r2),
+                error = function(e) NA_real_)
+  se <- if (!is.na(v) && v > 0) sqrt(v) else NA_real_
   list(delta = delta_v,
        lo = delta_v - 1.96 * se,
        hi = delta_v + 1.96 * se,
@@ -155,8 +158,11 @@ for (p in pairs) {
   message(sprintf("\n--- %s ---", p$label))
   meta <- outcomes[[p$outcome]]
 
+  # Cause-specific (competing) outcomes are restricted to the 1999-2014
+  # cause-coded cohort; all-cause uses every cycle.
+  cause_ok <- if (meta$is_competing) df$cause_coded else rep(TRUE, nrow(df))
   rows <- !is.na(df[[p$score1]]) & !is.na(df[[p$score2]]) &
-          !is.na(df[[meta$time_col]]) & !is.na(df[[meta$delta_col]])
+          !is.na(df[[meta$time_col]]) & !is.na(df[[meta$delta_col]]) & cause_ok
   df_p <- df[rows, ]
 
   # IPCW time-dependent AUC (point estimate) for each marker
@@ -239,7 +245,8 @@ message("\n--- Incremental value: RMRS added to FINDRISC on diabetes mortality -
 
 meta_dm <- outcomes$dm
 inc_rows <- !is.na(df$findrisc_score) & !is.na(df$rmrs_score) &
-            !is.na(df[[meta_dm$time_col]]) & !is.na(df[[meta_dm$delta_col]])
+            !is.na(df[[meta_dm$time_col]]) & !is.na(df[[meta_dm$delta_col]]) &
+            df$cause_coded
 df_i <- df[inc_rows, ]
 df_i$event_cause1 <- as.integer(df_i[[meta_dm$delta_col]] == 1)
 

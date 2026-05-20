@@ -67,41 +67,36 @@ scale_factor <- function(x, factor) {
 
 # ---- TAS components ---------------------------------------------------------
 
-#' Area of a triangle on a three-axis radar chart (axes 120 degrees apart)
+#' TAS score for one three-axis radar chart (Shin et al. 2024 PeerJ CS Eq 8)
 #'
-#' For axis values (a, b, c) the triangle has area
-#'   A = (sqrt(3) / 4) * (a*b + b*c + c*a)
+#' The three radar axes sit 120 degrees apart, so a triangle on axis values
+#' (a, b, c) has area (sqrt(3)/4)(ab + bc + ca). Writing X for the pairwise
+#' product sum of the patient's values and X' for the same sum after capping
+#' each value at the threshold (0.5), the sqrt(3)/4 factor cancels throughout
+#' Eq 8 and the score reduces to:
 #'
-#' @param x length-3 numeric, axis values in [0,1]
-.triangle_area <- function(x) {
-  (sqrt(3) / 4) * (x[1] * x[2] + x[2] * x[3] + x[3] * x[1])
-}
-
-#' TAS score for one three-axis radar chart
+#'   closeness = X / (0.75 + X - X')
+#'   severity  = I * (X - X') / 2.25
+#'   TAS       = 0.5 * (closeness + severity)
 #'
-#' Implements the closeness + severity components per Shin et al. 2024 sec 2.2.
-#' Closeness measures how close the patient's triangle is to the diagnostic
-#' threshold triangle. Severity measures how far the patient exceeds it.
+#' 0.75 is the pairwise-product sum of the critical triangle (0.5 each axis);
+#' 2.25 is that of the severity span (max minus critical). The indicator I is 1
+#' only when all three axes are at or above threshold (X' = 0.75), so a triangle
+#' earns a severity bonus only once every one of its factors has crossed over.
 #'
 #' @param x length-3 vector, each in [0,1] (scaled risk-factor values)
 #' @return TAS score in [0,1]
 tas_score <- function(x) {
   stopifnot(length(x) == 3, all(x >= 0 & x <= 1))
-  internal <- pmin(x, 0.5)
-  external <- x
-  critical <- rep(0.5, 3)
-  maximum  <- rep(1.0, 3)
+  x_int <- pmin(x, 0.5)
+  X     <- x[1] * x[2]         + x[2] * x[3]         + x[3] * x[1]
+  X_int <- x_int[1] * x_int[2] + x_int[2] * x_int[3] + x_int[3] * x_int[1]
 
-  area_internal <- .triangle_area(internal)
-  area_external <- .triangle_area(external)
-  area_critical <- .triangle_area(critical)
-  area_maximum  <- .triangle_area(maximum)
+  closeness <- X / (0.75 + X - X_int)
+  indicator <- as.numeric(all(x >= 0.5))
+  severity  <- indicator * (X - X_int) / 2.25
 
-  closeness <- area_internal / area_critical
-  severity  <- max(0, (area_external - area_critical) /
-                     (area_maximum  - area_critical))
-
-  (closeness + severity) / 2
+  0.5 * (closeness + severity)
 }
 
 # ---- RMRS aggregation -------------------------------------------------------

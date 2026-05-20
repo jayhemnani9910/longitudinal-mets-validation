@@ -96,7 +96,7 @@ phase1: Phase 1 - Data and scores {
   lmf_zip -> s02
   raw_nhanes -> s02 -> raw_lmf
   raw_nhanes -> s02 -> cohort_pre
-  cohort_pre -> s03 -> cohort: applies fasting + age 40-79 + HDL coalesce + broadened DM outcome + 15y DM follow-up
+  cohort_pre -> s03 -> cohort: applies fasting + age 20-79 + HDL coalesce + cause-coded flag + broadened DM outcome + 15y DM follow-up
   cohort -> s04
   rscores -> s04 -> cohort_scores
 }

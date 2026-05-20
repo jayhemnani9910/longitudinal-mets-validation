@@ -36,9 +36,13 @@
 suppressMessages({
   library(timeROC)
   library(survival)
+  library(riskRegression)
+  library(prodlim)
   library(pROC)
   library(dplyr)
 })
+
+source("R/utils/dca_competing.R")
 
 # Optional parallel backend; only enabled if N_WORKERS env var is set > 1.
 HAS_FUTURE <- requireNamespace("future.apply", quietly = TRUE) &&
@@ -74,10 +78,16 @@ cluster_rows <- split(seq_len(nrow(df)), df$cluster_id)
 #-----------------------------------------------------------------------
 
 # Outcome metadata mirrors scripts 05/06/07.
+# competing/cause_coded mirror scripts 06-08: cause-specific outcomes use the
+# Fine-Gray CIF + competing-risks net benefit on the 1999-2014 cause-coded
+# cohort; all-cause uses every cycle. DCA thresholds sit on each outcome's
+# achievable predicted-risk range (CV mortality never reaches the old 7.5%).
 outcomes <- list(
   allcause = list(time_col   = "followup_years",
                   event_col  = "event_allcause",
                   delta_col  = "event_allcause",
+                  status_col = "event_allcause",
+                  competing  = FALSE, cause_coded = FALSE,
                   cause      = 1,
                   horizons   = 9.5,
                   scores     = c("rmrs_score", "b9_score", "pce_score",
@@ -86,18 +96,22 @@ outcomes <- list(
   cv       = list(time_col   = "followup_years",
                   event_col  = "event_cv",
                   delta_col  = "competing_cv",
+                  status_col = "competing_cv",
+                  competing  = TRUE, cause_coded = TRUE,
                   cause      = 1,
                   horizons   = 9.5,
                   scores     = c("rmrs_score", "b9_score", "pce_score",
                                  "framingham_score"),
-                  dca_thresh = 0.075),
+                  dca_thresh = 0.02),
   dm       = list(time_col   = "followup_years_dm",
                   event_col  = "event_dm",
                   delta_col  = "competing_dm",
+                  status_col = "competing_dm",
+                  competing  = TRUE, cause_coded = TRUE,
                   cause      = 1,
                   horizons   = 14.5,
                   scores     = c("rmrs_score", "b9_score", "findrisc_score"),
-                  dca_thresh = 0.02)
+                  dca_thresh = 0.01)
 )
 
 # Registered pairwise contrasts. The H3 row is flagged below.
@@ -161,66 +175,29 @@ delong_delta <- function(df_p, marker1, marker2, time_col, delta_col,
   as.numeric(pROC::auc(r1) - pROC::auc(r2))
 }
 
-# Cox-recalibrated horizon-specific predicted risk per subject. Matches the
-# pattern in script 08 (DCA cross-score recalibration). Uses the simple
-# event indicator (not the competing-risk Hist object); this is the same
-# Cox-with-cause-1 recalibration used by dcurves under the hood.
-cox_risk_at_horizon <- function(df_in, score, time_col, event_col, horizon) {
-  ok <- !is.na(df_in[[score]]) & !is.na(df_in[[time_col]]) &
-        !is.na(df_in[[event_col]])
-  if (sum(ok) < 50) return(rep(NA_real_, nrow(df_in)))
-  df_s <- df_in[ok, ]
-  fit <- tryCatch(
-    coxph(as.formula(sprintf("Surv(%s, %s) ~ %s",
-                             time_col, event_col, score)),
-          data = df_s),
-    error = function(e) NULL
-  )
-  if (is.null(fit)) return(rep(NA_real_, nrow(df_in)))
-  sf <- tryCatch(survfit(fit, newdata = df_s), error = function(e) NULL)
-  if (is.null(sf)) return(rep(NA_real_, nrow(df_in)))
-  idx <- findInterval(horizon, sf$time)
-  if (idx < 1) idx <- 1
-  surv_at_h <- sf$surv[idx, ]
-  risk <- pmin(pmax(1 - surv_at_h, 0), 1)
-  out <- rep(NA_real_, nrow(df_in))
-  out[ok] <- risk
-  out
-}
-
-# Net benefit at a single decision threshold given a binary outcome y
-# and a predicted risk p in [0,1]. Standard Vickers definition.
-#   NB = TP/N - (FP/N) * (pt / (1 - pt))
-# Subjects with NA in either input are dropped.
-net_benefit <- function(p, y, threshold) {
-  ok <- !is.na(p) & !is.na(y)
-  p <- p[ok]; y <- y[ok]
-  if (length(y) < 50) return(NA_real_)
-  classify_high <- p >= threshold
-  tp <- sum(classify_high & y == 1)
-  fp <- sum(classify_high & y == 0)
-  n  <- length(y)
-  tp / n - (fp / n) * (threshold / (1 - threshold))
-}
-
 #-----------------------------------------------------------------------
 # One bootstrap replicate
 #-----------------------------------------------------------------------
 
 # Returns a list with auc (named numeric), delta_auc (named numeric),
-# dca_nb (named numeric).
+# dca_nb (named numeric). DCA recalibration and net benefit reuse the shared
+# competing-risks helpers (recalibrated_risk + cr_net_benefit) so the bootstrap
+# matches the point analysis in script 08.
 one_rep <- function(rep_idx, boot_rows) {
   df_b <- df[boot_rows, , drop = FALSE]
+  frame_for <- function(o) if (isTRUE(o$cause_coded))
+    df_b[df_b$cause_coded, , drop = FALSE] else df_b
 
   auc_out <- list()
   for (out_name in names(outcomes)) {
     o <- outcomes[[out_name]]
+    df_o <- frame_for(o)
     for (s in o$scores) {
       for (h in o$horizons) {
         key <- sprintf("%s__%s__t%.1f", s, out_name, h)
         auc_out[[key]] <- timeroc_point_auc(
-          df_b[[o$time_col]], df_b[[o$delta_col]],
-          df_b[[s]], o$cause, h
+          df_o[[o$time_col]], df_o[[o$delta_col]],
+          df_o[[s]], o$cause, h
         )
       }
     }
@@ -229,29 +206,32 @@ one_rep <- function(rep_idx, boot_rows) {
   delta_out <- list()
   for (p in pairs) {
     o <- outcomes[[p$outcome]]
+    df_o <- frame_for(o)
     for (h in o$horizons) {
       key <- sprintf("%s_vs_%s__%s__t%.1f",
                      p$score1, p$score2, p$outcome, h)
       delta_out[[key]] <- delong_delta(
-        df_b, p$score1, p$score2,
+        df_o, p$score1, p$score2,
         o$time_col, o$delta_col, o$cause, h
       )
     }
   }
 
-  # DCA net benefit at one threshold per outcome, per score in that outcome's
-  # registered set. Cox-recalibrate each score on the resampled cohort so the
-  # net benefit is comparable across scores. Mirrors script 08.
+  # Competing-risks DCA net benefit at one threshold per outcome, per score.
+  # Recalibrate via the Fine-Gray CIF (Cox for all-cause) on the resampled
+  # cohort, then score net benefit with the Aalen-Johansen incidence.
   nb_out <- list()
   for (out_name in names(outcomes)) {
     o <- outcomes[[out_name]]
-    y_binary <- as.integer(df_b[[o$delta_col]] == o$cause &
-                           df_b[[o$time_col]] <= o$horizons[1])
+    df_o <- frame_for(o)
+    h <- o$horizons[1]
     for (s in o$scores) {
-      key <- sprintf("%s__%s__t%.1f", s, out_name, o$horizons[1])
-      risk <- cox_risk_at_horizon(df_b, s, o$time_col, o$event_col,
-                                  o$horizons[1])
-      nb_out[[key]] <- net_benefit(risk, y_binary, o$dca_thresh)
+      key <- sprintf("%s__%s__t%.1f", s, out_name, h)
+      risk <- recalibrated_risk(df_o, s, o$time_col, o$status_col,
+                                o$cause, h, o$competing)
+      nb_out[[key]] <- cr_net_benefit(risk, df_o[[o$time_col]],
+                                      df_o[[o$status_col]], o$cause, h,
+                                      o$dca_thresh)
     }
   }
 
@@ -327,7 +307,10 @@ if (HAS_FUTURE && N_WORKERS > 1) {
                        "cluster_rows", "outcomes", "pairs",
                        "build_rows", "one_rep",
                        "timeroc_point_auc", "delong_delta",
-                       "cox_risk_at_horizon", "net_benefit")
+                       "recalibrated_risk", "cr_net_benefit",
+                       "cr_net_benefit_all", ".cif_at"),
+    future.packages = c("timeROC", "survival", "riskRegression",
+                        "prodlim", "pROC")
   )
   future::plan(future::sequential)
 } else {

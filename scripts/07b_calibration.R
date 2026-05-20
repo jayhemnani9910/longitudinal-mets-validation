@@ -21,16 +21,22 @@ df <- readRDS("data/processed/cohort_with_scores.rds")
 
 dir.create("results/calibration", recursive = TRUE, showWarnings = FALSE)
 
+# Cause-specific outcomes use the 1999-2014 cause-coded cohort and the same
+# off-cap horizons as the survival scripts (9.5y for all-cause/CV, 14.5y for
+# the 15y diabetes frame). Diabetes uses the followup_years_dm time variable.
+df_cause <- df[df$cause_coded, ]
+
 outcomes <- list(
   allcause = list(formula = Surv(followup_years, event_allcause) ~ 1,
+                  data = df, time = 9.5,
                   scores  = c("rmrs_score", "b9_score", "pce_score",
                               "framingham_score", "findrisc_score")),
   cv       = list(formula = Hist(followup_years, competing_cv) ~ 1,
-                  cause = 1,
+                  cause = 1, data = df_cause, time = 9.5,
                   scores = c("rmrs_score", "b9_score", "pce_score",
                              "framingham_score")),
-  dm       = list(formula = Hist(followup_years, competing_dm) ~ 1,
-                  cause = 1,
+  dm       = list(formula = Hist(followup_years_dm, competing_dm) ~ 1,
+                  cause = 1, data = df_cause, time = 14.5,
                   scores = c("rmrs_score", "b9_score", "findrisc_score"))
 )
 
@@ -38,15 +44,15 @@ cal_rows <- list()
 for (out_name in names(outcomes)) {
   out <- outcomes[[out_name]]
   for (s in out$scores) {
-    rows <- !is.na(df[[s]])
-    df_s <- df[rows, ]
+    rows <- !is.na(out$data[[s]])
+    df_s <- out$data[rows, ]
     if (nrow(df_s) < 100) next
 
     args <- list(
       object   = setNames(list(df_s[[s]]), s),
       data     = df_s,
       formula  = out$formula,
-      times    = 10,
+      times    = out$time,
       metrics  = c("brier", "auc"),
       summary  = "ibs"
     )
@@ -60,9 +66,10 @@ for (out_name in names(outcomes)) {
 
     brier <- score_obj$Brier$score
     cal_rows[[length(cal_rows) + 1]] <- data.frame(
-      outcome    = out_name,
-      score      = s,
-      brier_10y  = brier$Brier[brier$model != "Null model"][1]
+      outcome   = out_name,
+      score     = s,
+      horizon_y = out$time,
+      brier     = brier$Brier[brier$model != "Null model"][1]
     )
 
     # Distribution plot

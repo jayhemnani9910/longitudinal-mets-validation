@@ -18,8 +18,17 @@ suppressMessages({
   library(dplyr)
 })
 
+source("R/utils/survival_helpers.R")
+
 message("Loading cohort with scores ...")
 df <- readRDS("data/processed/cohort_with_scores.rds")
+
+# Cause-specific CV mortality is restricted to cycles with full leading-cause
+# coding (1999-2014); the 2015-2018 public-use file folds stroke into "all
+# other", so those cycles are excluded from the CV analysis.
+df <- df[df$cause_coded, ]
+df$cluster_id <- paste(df$sdmvstra, df$sdmvpsu, sep = "_")
+message(sprintf("  Cause-coded cohort N = %d", nrow(df)))
 
 # Scores valid for CV outcome (skip FINDRISC which is diabetes-specific)
 scores <- c("rmrs_score", "b9_score", "pce_score", "framingham_score")
@@ -32,20 +41,12 @@ for (s in scores) {
   rows <- !is.na(df[[s]])
   df_s <- df[rows, ]
 
-  # Fine-Gray for subdistribution hazards
-  # Note: get(s) fails inside formula for FGR; use as.formula() instead.
-  fgr_formula <- as.formula(sprintf("Hist(followup_years, competing_cv) ~ %s", s))
-  fit <- tryCatch(
-    FGR(
-      fgr_formula,
-      data  = df_s,
-      cause = 1
-    ),
-    error = function(e) {
-      message(sprintf("  FGR failed: %s", e$message))
-      NULL
-    }
-  )
+  # Survey-weighted Fine-Gray subdistribution hazard ratio (per-SD-free, raw
+  # score scale). finegray() + weighted Cox carries the MEC weight; robust SE
+  # is clustered on the PSU.
+  fg <- weighted_finegray_hr(df_s, s, "followup_years", "competing_cv",
+                             "wt_mec", "cluster_id", cause = 1)
+  fit <- fg
 
   # Time-dependent AUC for cause-specific outcome. 10y horizon operationalized
   # as t=9.5 to avoid IPCW degeneracy at the follow-up cap (see script 05 note).
@@ -69,9 +70,10 @@ for (s in scores) {
 
   if (!is.null(roc_obj)) {
     # For ipcwcompetingrisksROC: AUC_1[t1,t2] = AUC for cause 1 at each timepoint
-    message(sprintf("  n=%d  AUC_cause1(5y)=%.3f  AUC_cause1(9.5y)=%s",
+    message(sprintf("  n=%d  AUC_cause1(5y)=%.3f  AUC_cause1(9.5y)=%s  wFG HR=%s",
                     sum(rows), roc_obj$AUC_1[1],
-                    ifelse(is.na(roc_obj$AUC_1[2]), "NA", sprintf("%.3f", roc_obj$AUC_1[2]))))
+                    ifelse(is.na(roc_obj$AUC_1[2]), "NA", sprintf("%.3f", roc_obj$AUC_1[2])),
+                    ifelse(is.na(fg$hr), "NA", sprintf("%.3f (%.3f, %.3f)", fg$hr, fg$lo, fg$hi))))
   }
 }
 
@@ -81,7 +83,10 @@ summary_tbl <- data.frame(
   score    = scores,
   n        = sapply(results, function(r) r$rows),
   auc_5y   = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[1]),
-  auc_9_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[2])
+  auc_9_5y = sapply(results, function(r) if (is.null(r$roc)) NA else r$roc$AUC_1[2]),
+  wfg_hr   = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$hr),
+  wfg_lo   = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$lo),
+  wfg_hi   = sapply(results, function(r) if (is.null(r$fit)) NA else r$fit$hi)
 )
 write.csv(summary_tbl, "results/cv_summary.csv", row.names = FALSE)
 

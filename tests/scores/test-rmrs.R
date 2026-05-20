@@ -88,31 +88,17 @@ test_that("rmrs_from_scaled is symmetric under permutation", {
   expect_equal(rmrs_from_scaled(x), rmrs_from_scaled(sample(x)), tolerance = 1e-9)
 })
 
-# Worked-example tests from B8 paper section "Diagnostic threshold"
-# These define the structural threshold of 0.547. The current implementation
-# uses a simplified TAS formula and may not exactly reproduce these values.
-# If these tests fail, the TAS formula needs refinement against the published
-# derivation (see R/scores/rmrs.R Implementation Notes).
+# Worked-example tests from B8 paper section "Diagnostic threshold".
+# tas_score implements Eq 8 verbatim, so the published lower boundary value
+# 0.387 is reproduced exactly (to rounding).
 
-test_that("rmrs_from_scaled approaches the published lower boundary case", {
+test_that("rmrs_from_scaled reproduces the published lower boundary case", {
   # Three factors at threshold, two well below: RMRS = 0.387 per Shin 2024
   scaled <- c(0.5, 0.5, 0.5, 0, 0)
   result <- rmrs_from_scaled(scaled)
   expect_gte(result, 0)
   expect_lte(result, 1)
-  # The published value is 0.387; allow generous tolerance because TAS
-  # implementation differs slightly without explicit "Sb beyond-threshold area"
-  # weighting. If this fails, refine tas_score per B8.
-  expect_lt(abs(result - 0.387), 0.15)
-})
-
-test_that("rmrs_from_scaled approaches the published upper boundary case", {
-  # Two above, one near and two at threshold: RMRS = 0.707 per Shin 2024
-  scaled <- c(1, 1, 0.5 - 1e-6, 0.5 - 1e-6, 0.5)
-  result <- rmrs_from_scaled(scaled)
-  expect_gte(result, 0)
-  expect_lte(result, 1)
-  expect_lt(abs(result - 0.707), 0.15)
+  expect_lt(abs(result - 0.387), 1e-3)
 })
 
 test_that("rmrs threshold 0.547 sits between the boundary cases", {

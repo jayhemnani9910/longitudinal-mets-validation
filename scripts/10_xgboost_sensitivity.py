@@ -65,14 +65,17 @@ def horizon_labels(df):
     follow-up is min(followup, horizon). This matches the t* evaluation
     convention used by the Phase 2 survival AUCs.
     """
+    # cause_coded flag: cause-specific (cv, dm) outcomes are restricted to the
+    # 1999-2014 cycles with full leading-cause coding, matching the survival
+    # scripts. All-cause uses every cycle.
     return [
-        ("event_allcause", "followup_years", 9.5, "allcause_9_5y"),
-        ("event_allcause", "followup_years", 5.0, "allcause_5y"),
-        ("event_cv",       "followup_years", 9.5, "cv_9_5y"),
-        ("event_cv",       "followup_years", 5.0, "cv_5y"),
-        ("event_dm",       "followup_years_dm", 14.5, "dm_14_5y"),
-        ("event_dm",       "followup_years_dm", 10.0, "dm_10y"),
-        ("event_dm",       "followup_years_dm", 5.0,  "dm_5y"),
+        ("event_allcause", "followup_years", 9.5, "allcause_9_5y", False),
+        ("event_allcause", "followup_years", 5.0, "allcause_5y", False),
+        ("event_cv",       "followup_years", 9.5, "cv_9_5y", True),
+        ("event_cv",       "followup_years", 5.0, "cv_5y", True),
+        ("event_dm",       "followup_years_dm", 14.5, "dm_14_5y", True),
+        ("event_dm",       "followup_years_dm", 10.0, "dm_10y", True),
+        ("event_dm",       "followup_years_dm", 5.0,  "dm_5y", True),
     ]
 
 
@@ -106,7 +109,11 @@ def main():
     os.makedirs("results", exist_ok=True)
     summary_rows = []
 
-    for event_col, time_col, horizon, label in horizon_labels(df):
+    cause_coded = (
+        df["cause_coded"].astype(str).str.upper() == "TRUE"
+    ).values if "cause_coded" in df.columns else np.ones(len(df), dtype=bool)
+
+    for event_col, time_col, horizon, label, cc_only in horizon_labels(df):
         if event_col not in df.columns or time_col not in df.columns:
             print(f"Skipping {label}: column missing")
             continue
@@ -118,8 +125,11 @@ def main():
         y = (ev_v == 1) & in_window
         y = y.astype(int)
 
-        # Restrict CV to subjects with at least some follow-up (drop NA times)
+        # Restrict to subjects with follow-up; cause-specific outcomes also
+        # restrict to the cause-coded cycles.
         mask = ~np.isnan(time_v)
+        if cc_only:
+            mask = mask & cause_coded
         if mask.sum() < 100 or y[mask].sum() < 5:
             print(f"XGBoost {label}: insufficient events ({y[mask].sum()})")
             continue

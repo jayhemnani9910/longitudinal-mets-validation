@@ -32,6 +32,7 @@ mcq    <- load_nhanes_table("MCQ")
 diq    <- load_nhanes_table("DIQ")
 smq    <- load_nhanes_table("SMQ")
 bpq    <- load_nhanes_table("BPQ")
+paq    <- load_nhanes_table("PAQ")
 
 message("Standardizing column names ...")
 
@@ -140,14 +141,24 @@ mcq_sub <- mcq %>% transmute(
   SEQN,
   prior_cvd = is_yes(MCQ160B) | is_yes(MCQ160C) |
               is_yes(MCQ160E) | is_yes(MCQ160F),
-  prior_cvd = replace_na(prior_cvd, FALSE)
+  prior_cvd = replace_na(prior_cvd, FALSE),
+  # Family history of diabetes (FINDRISC item). MCQ300C asks whether a close
+  # biological relative was ever told they had diabetes. Available cycles D+
+  # (2005-2006 onward); absent in 1999-2004, which fall back to no-history.
+  # MCQ300C does not separate first- from second-degree relatives, so any
+  # positive is mapped to the first-degree FINDRISC tier.
+  fam_dm_yes = is_yes(get_or_na(mcq, "MCQ300C"))
 )
 
 # Prior T2D: DIQ010 == 1 means "doctor told you have diabetes"
+# Prediabetes history: DIQ160 == 1 means "ever told you have prediabetes"
+# (FINDRISC high-blood-glucose item). Available cycles D+ (2005-2006 onward).
 diq_sub <- diq %>% transmute(
   SEQN,
   prior_t2d = is_yes(DIQ010),
-  prior_t2d = replace_na(prior_t2d, FALSE)
+  prior_t2d = replace_na(prior_t2d, FALSE),
+  prediabetes_hx = is_yes(get_or_na(diq, "DIQ160")),
+  prediabetes_hx = replace_na(prediabetes_hx, FALSE)
 )
 
 # Smoking: SMQ040 (current smoking) — 1="Every day", 2="Some days", 3="Not at all"
@@ -164,6 +175,22 @@ bpq_sub <- bpq %>% transmute(
   bp_treatment = replace_na(bp_treatment, FALSE)
 )
 
+# Physical activity (FINDRISC item). The PAQ instrument was redesigned in 2007,
+# so the variable names differ by era:
+#   1999-2006 (A-D): PAD200 (vigorous) / PAD320 (moderate) over the past 30 days
+#   2007-2018 (E-J): PAQ650/PAQ665 (vigorous/moderate recreational),
+#                    PAQ605/PAQ620 (vigorous/moderate work)
+# A "Yes" to any available item marks the person as physically active. is_yes()
+# returns FALSE for the items absent in a given cycle, so this one expression
+# harmonizes both eras.
+paq_sub <- paq %>% transmute(
+  SEQN,
+  physical_active =
+    is_yes(get_or_na(paq, "PAD200")) | is_yes(get_or_na(paq, "PAD320")) |
+    is_yes(get_or_na(paq, "PAQ650")) | is_yes(get_or_na(paq, "PAQ665")) |
+    is_yes(get_or_na(paq, "PAQ605")) | is_yes(get_or_na(paq, "PAQ620"))
+)
+
 message("Merging tables ...")
 df <- demo_sub %>%
   left_join(bmx_sub,   by = "SEQN") %>%
@@ -175,7 +202,27 @@ df <- demo_sub %>%
   left_join(mcq_sub,   by = "SEQN") %>%
   left_join(diq_sub,   by = "SEQN") %>%
   left_join(smq_sub,   by = "SEQN") %>%
-  left_join(bpq_sub,   by = "SEQN")
+  left_join(bpq_sub,   by = "SEQN") %>%
+  left_join(paq_sub,   by = "SEQN")
+
+# FINDRISC questionnaire-derived inputs.
+#   family_history_dm: MCQ300C positive -> first-degree tier, else none.
+#   prior_high_glucose: self-reported prediabetes (DIQ160) OR measured impaired
+#     fasting glucose (100-125 mg/dL). The measured component is available in
+#     every cycle, so this input varies across the full cohort even where the
+#     self-report item is absent (1999-2004).
+df <- df %>% mutate(
+  family_history_dm = if_else(fam_dm_yes, "first_degree", "none"),
+  prior_high_glucose = prediabetes_hx |
+    (!is.na(fasting_glucose) & fasting_glucose >= 100 & fasting_glucose < 126),
+  prior_high_glucose = replace_na(prior_high_glucose, FALSE),
+  physical_active = replace_na(physical_active, FALSE),
+  # Public-use LMF releases only leading-cause codes 1, 2, 10 for the
+  # 2015-2016 and 2017-2018 cycles; stroke (5), diabetes (7) and nephritis (9)
+  # are folded into 10. Cause-specific (CV, diabetes) analyses are restricted
+  # to cycles with full cause coding via this flag; all-cause uses every cycle.
+  cause_coded = !(cycle %in% c("2015-2016", "2017-2018"))
+)
 
 message(sprintf("After merge: %d rows", nrow(df)))
 

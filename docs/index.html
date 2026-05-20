@@ -25,21 +25,21 @@
   <h2>Headline finding</h2>
   <ul class="tldr">
     <li>For <strong>cardiovascular and all-cause mortality</strong>, the clinical risk equations (Framingham 2008, PCE) clearly dominate the metabolic-syndrome-derived scores. The XGBoost ceiling on the MetS inputs alone does not close the gap.</li>
-    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.011 favoring RMRS, 95% bootstrap CI -0.053 to +0.075) and gives modest incremental value when stacked on FINDRISC (IDI 0.0031, continuous NRI 0.173, both CIs exclude zero).</li>
+    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.014 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
     <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the same inputs exceeds both. The B9 underperformance pattern is a tree-structure problem and is not a problem of the MetS signal.</li>
   </ul>
 
   <div class="callout">
-    <strong>Pre-registered H3 read.</strong> The bootstrap 95% percentile lower bound at -0.053 sits 0.003 AUC units below the registered -0.05 non-inferiority margin, so the test does not formally establish non-inferiority. The DeLong-based CI agreed to a thousandth. Both intervals locate RMRS and FINDRISC within a 5 AUC point band, and the point estimate favors RMRS.
+    <strong>Pre-registered H3 read.</strong> The bootstrap 95% percentile lower bound at -0.051 sits 0.001 AUC units below the registered -0.05 non-inferiority margin, so the test does not formally establish non-inferiority, though the miss is smaller than the bootstrap resampling resolution. The DeLong-based CI was similar at -0.053 to +0.080. Both intervals locate RMRS and FINDRISC within a narrow band, and the point estimate favors RMRS.
   </div>
 </section>
 
 <section id="design">
   <h2>Study at a glance</h2>
-  <p><strong>Cohort.</strong> Pooled NHANES 1999 to 2018 fasting subsample, adults 40 to 79 years, with non-missing values on the five metabolic syndrome components and eligible mortality linkage. N = 17,031.</p>
-  <p><strong>Outcomes.</strong> Cardiovascular mortality (10-year cap), all-cause mortality (10-year cap), diabetes-related mortality under a broadened definition combining underlying-cause diabetes mellitus, underlying-cause nephritis, and the LMF DIABETES contributing-cause flag (15-year cap). 806, 181, and 80 events respectively.</p>
+  <p><strong>Cohort.</strong> Pooled NHANES 1999 to 2018 fasting subsample, adults 20 to 79 years, with non-missing values on the five metabolic syndrome components and eligible mortality linkage. N = 17,031 (all-cause); cardiovascular and diabetes-related analyses use the 13,836 participants from the 1999 to 2014 cycles with full leading-cause coding.</p>
+  <p><strong>Outcomes.</strong> All-cause mortality (10-year cap, 806 deaths, full cohort), cardiovascular mortality (10-year cap, 173 deaths), and diabetes-related mortality under a broadened definition combining underlying-cause diabetes mellitus, underlying-cause nephritis, and the LMF DIABETES contributing-cause flag (15-year cap, 77 deaths). Cardiovascular and diabetes counts are within the cause-coded subcohort.</p>
   <p><strong>Scores compared.</strong> RMRS (continuous metabolic-syndrome risk score via triangular areal similarity); B9 (decision-tree formulation of the same five components); ACC/AHA Pooled Cohort Equations (primary cardiovascular baseline); Framingham 2008 (secondary cardiovascular baseline); FINDRISC (type 2 diabetes screening baseline).</p>
-  <p><strong>Methods.</strong> Survey-weighted Fine-Gray competing-risks (cardiovascular, diabetes) and Cox proportional hazards (all-cause). Time-dependent IPCW AUC at off-cap horizons. Decision curve analysis with per-score Cox recalibration to put all five scores on a probability scale. DeLong-based delta-AUC plus 500-rep PSU-cluster bootstrap CIs. Continuous NRI and IDI. XGBoost ML ceiling with PSU x stratum grouped cross-validation.</p>
+  <p><strong>Methods.</strong> Survey-weighted Fine-Gray competing-risks (cardiovascular, diabetes) and Cox proportional hazards (all-cause). Time-dependent IPCW AUC at off-cap horizons. Competing-risks decision curve analysis with Fine-Gray cumulative-incidence recalibration and Aalen-Johansen net benefit. DeLong-based delta-AUC plus 500-rep PSU-cluster bootstrap CIs. Continuous NRI and IDI. XGBoost ML ceiling with PSU x stratum grouped cross-validation.</p>
 </section>
 
 <section id="diagrams">
@@ -73,16 +73,16 @@
     <tbody>
       <tr><td>Framingham 2008</td><td>All-cause</td><td>9.5y</td><td class="num">0.810 (0.795, 0.825)</td></tr>
       <tr><td>PCE</td><td>All-cause</td><td>9.5y</td><td class="num">0.758 (0.736, 0.778)</td></tr>
-      <tr><td>FINDRISC</td><td>All-cause</td><td>9.5y</td><td class="num">0.682 (0.659, 0.703)</td></tr>
-      <tr><td>RMRS</td><td>All-cause</td><td>9.5y</td><td class="num">0.595 (0.574, 0.618)</td></tr>
+      <tr><td>FINDRISC</td><td>All-cause</td><td>9.5y</td><td class="num">0.672 (0.651, 0.695)</td></tr>
+      <tr><td>RMRS</td><td>All-cause</td><td>9.5y</td><td class="num">0.600 (0.578, 0.622)</td></tr>
       <tr><td>B9 tree</td><td>All-cause</td><td>9.5y</td><td class="num">0.525 (0.505, 0.542)</td></tr>
-      <tr><td>Framingham 2008</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.859 (0.833, 0.883)</td></tr>
-      <tr><td>PCE</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.811 (0.776, 0.846)</td></tr>
-      <tr><td>RMRS</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.662 (0.625, 0.692)</td></tr>
-      <tr><td>B9 tree</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.565 (0.528, 0.597)</td></tr>
-      <tr><td>FINDRISC</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.766 (0.715, 0.817)</td></tr>
-      <tr><td>RMRS</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.747 (0.692, 0.800)</td></tr>
-      <tr><td>B9 tree</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.585 (0.533, 0.633)</td></tr>
+      <tr><td>Framingham 2008</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.858 (0.831, 0.884)</td></tr>
+      <tr><td>PCE</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.810 (0.772, 0.841)</td></tr>
+      <tr><td>RMRS</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.660 (0.625, 0.693)</td></tr>
+      <tr><td>B9 tree</td><td>Cardiovascular</td><td>9.5y</td><td class="num">0.560 (0.519, 0.593)</td></tr>
+      <tr><td>FINDRISC</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.770 (0.705, 0.826)</td></tr>
+      <tr><td>RMRS</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.752 (0.696, 0.804)</td></tr>
+      <tr><td>B9 tree</td><td>Diabetes-related</td><td>14.5y</td><td class="num">0.582 (0.532, 0.631)</td></tr>
     </tbody>
   </table>
   </div>
@@ -94,11 +94,11 @@
       <tr><th>Contrast</th><th>Outcome (horizon)</th><th class="num">Delta-AUC (95% CI)</th></tr>
     </thead>
     <tbody>
-      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.011 (-0.053, +0.075)</td></tr>
-      <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.066 (+0.044, +0.089)</td></tr>
-      <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.086 (+0.044, +0.129)</td></tr>
-      <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.149 (+0.079, +0.215)</td></tr>
-      <tr><td>PCE vs Framingham (H2)</td><td>Cardiovascular (9.5y)</td><td class="num">+0.009 (-0.008, +0.026)</td></tr>
+      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.014 (-0.051, +0.090)</td></tr>
+      <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.071 (+0.049, +0.094)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.093 (+0.050, +0.135)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.158 (+0.088, +0.220)</td></tr>
+      <tr><td>PCE vs Framingham (H2)</td><td>Cardiovascular (9.5y)</td><td class="num">+0.007 (-0.010, +0.022)</td></tr>
     </tbody>
   </table>
   </div>
@@ -111,8 +111,8 @@
     </thead>
     <tbody>
       <tr><td>All-cause (9.5y)</td><td class="num">0.813</td><td class="num">Framingham 0.810 (no headroom)</td></tr>
-      <tr><td>Cardiovascular (9.5y)</td><td class="num">0.813</td><td class="num">Framingham 0.859 (clinical above ML)</td></tr>
-      <tr><td>Diabetes-related (14.5y)</td><td class="num">0.799</td><td class="num">FINDRISC 0.766 (5 AUC pts of headroom)</td></tr>
+      <tr><td>Cardiovascular (9.5y)</td><td class="num">0.817</td><td class="num">Framingham 0.858 (clinical above ML)</td></tr>
+      <tr><td>Diabetes-related (14.5y)</td><td class="num">0.828</td><td class="num">FINDRISC 0.770 (6 to 8 AUC pts of headroom)</td></tr>
     </tbody>
   </table>
   </div>
