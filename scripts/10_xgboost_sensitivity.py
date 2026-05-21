@@ -2,18 +2,32 @@
 """scripts/10_xgboost_sensitivity.py
 
 XGBoost ML upper-bound baseline as a sensitivity analysis. Bounds the
-achievable AUC on the 5 MetS factors + age + sex, providing a ceiling
-against which the clinical risk scores can be interpreted.
+achievable AUC and provides a ceiling against which the clinical risk scores
+can be interpreted. Two feature sets are reported:
+  - mets5:     the five metabolic-syndrome components only (waist, systolic and
+               diastolic BP, HDL, fasting glucose, triglycerides). This is the
+               ceiling that speaks to whether the MetS signal itself limits the
+               clinical scores.
+  - clinical8: the same five components plus age and sex, an upper reference
+               that includes the demographic predictors the PCE and Framingham
+               equations also use.
 
 Inputs:  data/processed/cohort_with_scores.rds (canonical)
          data/processed/cohort_with_scores.csv (generated from RDS via Rscript
          when missing, since the arrow R package is intentionally not installed)
-Outputs: results/xgboost_{allcause,cv,dm}.txt
+Outputs: results/xgboost_{mets5,clinical8}_{label}.txt, results/xgboost_summary.csv
 
 NHANES PSU-grouped CV respects the sampling design and avoids optimism from
-within-PSU resampling. Horizons match the survival scripts: censor at 9.5y
-for allcause / cv (followup_years), 14.5y for dm (followup_years_dm), with
-events counted only inside the horizon.
+within-PSU resampling. Median imputation is fit on each training fold only.
+Horizons match the survival scripts: censor at 9.5y for allcause / cv
+(followup_years), 14.5y for dm (followup_years_dm), with events counted only
+inside the horizon.
+
+Caveats (also written into each output file): the AUC is unweighted, so it
+describes the sample rather than the weighted US population; and the label is a
+binary horizon-capped event (a subject censored before the horizon is treated
+as event-free), so these values are an approximation to the IPCW time-dependent
+AUC reported by the survival scripts, not an identical statistic.
 """
 
 import os
@@ -79,15 +93,73 @@ def horizon_labels(df):
     ]
 
 
+# The five metabolic-syndrome components (BP enters as systolic and diastolic).
+METS5 = ["waist_cm", "sbp", "dbp", "hdl", "fasting_glucose", "triglycerides"]
+# Same components plus the demographic predictors PCE and Framingham also use.
+CLINICAL8 = METS5 + ["age", "sex_int"]
+FEATURE_SETS = (("mets5", METS5), ("clinical8", CLINICAL8))
+
+CAVEAT_UNWEIGHTED = "caveat=unweighted_AUC_describes_sample_not_weighted_population"
+CAVEAT_BINARY = "caveat=binary_horizon_capped_label_approximates_IPCW_not_identical"
+
+
+def evaluate(df, feature_cols, event_col, time_col, horizon, cc_only,
+             cause_coded, label):
+    """PSU-grouped 5-fold CV AUC for one feature set and outcome.
+
+    Imputation is fit on each training fold only, so no test-fold information
+    leaks into the model.
+    """
+    time_v = df[time_col].astype(float).values
+    ev_v = df[event_col].astype(int).values
+    # Horizon-cap the event: any event past the horizon is treated as censored.
+    y = ((ev_v == 1) & (time_v <= horizon)).astype(int)
+    mask = ~np.isnan(time_v)
+    if cc_only:
+        mask = mask & cause_coded
+    if mask.sum() < 100 or y[mask].sum() < 5:
+        print(f"XGBoost {label}: insufficient events ({y[mask].sum()})")
+        return None
+
+    Xm = df.loc[mask, feature_cols].reset_index(drop=True)
+    ym = y[mask]
+    groups = df.loc[mask, "nhanes_cluster"].values
+
+    aucs = []
+    for train_idx, test_idx in GroupKFold(n_splits=5).split(Xm, ym, groups):
+        if ym[test_idx].sum() == 0:
+            continue
+        train_median = Xm.iloc[train_idx].median(numeric_only=True)
+        x_train = Xm.iloc[train_idx].fillna(train_median)
+        x_test = Xm.iloc[test_idx].fillna(train_median)
+        model = xgb.XGBClassifier(
+            max_depth=4,
+            n_estimators=200,
+            learning_rate=0.05,
+            subsample=0.8,
+            eval_metric="auc",
+        )
+        model.fit(x_train, ym[train_idx])
+        proba = model.predict_proba(x_test)[:, 1]
+        aucs.append(roc_auc_score(ym[test_idx], proba))
+
+    if not aucs:
+        print(f"XGBoost {label}: no fold had test events")
+        return None
+
+    return {
+        "mean_auc": float(np.mean(aucs)),
+        "std_auc": float(np.std(aucs)),
+        "n_events": int(ym.sum()),
+        "n": int(mask.sum()),
+        "fold_aucs": aucs,
+    }
+
+
 def main():
     ensure_csv()
     df = pd.read_csv(CSV_PATH)
-
-    features = [
-        "age", "waist_cm", "sbp", "dbp", "hdl",
-        "fasting_glucose", "triglycerides", "sex"
-    ]
-    df = df.dropna(subset=features + ["sdmvpsu", "sdmvstra"])
+    df = df.dropna(subset=["sdmvpsu", "sdmvstra"])
     df["sex_int"] = (df["sex"].astype(str).str.lower() == "male").astype(int)
     # NHANES has only 3 PSUs nested within ~148 strata. PSU alone is too
     # coarse for 5-fold grouping; use stratum * PSU which gives ~301 groups
@@ -97,13 +169,6 @@ def main():
         + "_"
         + df["sdmvpsu"].astype(int).astype(str)
     )
-
-    X = df[
-        ["age", "waist_cm", "sbp", "dbp", "hdl",
-         "fasting_glucose", "triglycerides", "sex_int"]
-    ].copy()
-    X = X.fillna(X.median(numeric_only=True))
-    X.reset_index(drop=True, inplace=True)
     df = df.reset_index(drop=True)
 
     os.makedirs("results", exist_ok=True)
@@ -113,74 +178,42 @@ def main():
         df["cause_coded"].astype(str).str.upper() == "TRUE"
     ).values if "cause_coded" in df.columns else np.ones(len(df), dtype=bool)
 
-    for event_col, time_col, horizon, label, cc_only in horizon_labels(df):
-        if event_col not in df.columns or time_col not in df.columns:
-            print(f"Skipping {label}: column missing")
-            continue
-
-        # Horizon-cap the event: any event with follow-up > horizon is censored
-        time_v = df[time_col].astype(float).values
-        ev_v = df[event_col].astype(int).values
-        in_window = time_v <= horizon
-        y = (ev_v == 1) & in_window
-        y = y.astype(int)
-
-        # Restrict to subjects with follow-up; cause-specific outcomes also
-        # restrict to the cause-coded cycles.
-        mask = ~np.isnan(time_v)
-        if cc_only:
-            mask = mask & cause_coded
-        if mask.sum() < 100 or y[mask].sum() < 5:
-            print(f"XGBoost {label}: insufficient events ({y[mask].sum()})")
-            continue
-
-        Xm = X.loc[mask].reset_index(drop=True)
-        ym = y[mask]
-        groups = df.loc[mask, "nhanes_cluster"].values
-
-        # PSU-grouped 5-fold CV
-        gkf = GroupKFold(n_splits=5)
-        aucs = []
-        for train_idx, test_idx in gkf.split(Xm, ym, groups):
-            if ym[test_idx].sum() == 0:
+    for fs_name, feature_cols in FEATURE_SETS:
+        for event_col, time_col, horizon, label, cc_only in horizon_labels(df):
+            if event_col not in df.columns or time_col not in df.columns:
+                print(f"Skipping {fs_name}/{label}: column missing")
                 continue
-            model = xgb.XGBClassifier(
-                max_depth=4,
-                n_estimators=200,
-                learning_rate=0.05,
-                subsample=0.8,
-                eval_metric="auc",
+
+            res = evaluate(df, feature_cols, event_col, time_col, horizon,
+                           cc_only, cause_coded, f"{fs_name}/{label}")
+            if res is None:
+                continue
+
+            print(
+                f"XGBoost {fs_name}/{label}: n={res['n']} "
+                f"events={res['n_events']} "
+                f"AUC mean={res['mean_auc']:.3f} std={res['std_auc']:.3f}"
             )
-            model.fit(Xm.iloc[train_idx], ym[train_idx])
-            proba = model.predict_proba(Xm.iloc[test_idx])[:, 1]
-            aucs.append(roc_auc_score(ym[test_idx], proba))
-
-        if not aucs:
-            print(f"XGBoost {label}: no fold had test events")
-            continue
-
-        mean_auc = float(np.mean(aucs))
-        std_auc = float(np.std(aucs))
-        n_events = int(ym.sum())
-        print(
-            f"XGBoost {label}: n={mask.sum()} events={n_events} "
-            f"AUC mean={mean_auc:.3f} std={std_auc:.3f}"
-        )
-        with open(f"results/xgboost_{label}.txt", "w") as f:
-            f.write(f"n={int(mask.sum())}\n")
-            f.write(f"events={n_events}\n")
-            f.write(f"horizon_y={horizon}\n")
-            f.write(f"mean_auc={mean_auc:.4f}\n")
-            f.write(f"std_auc={std_auc:.4f}\n")
-            f.write(f"fold_aucs={aucs}\n")
-        summary_rows.append({
-            "label": label,
-            "horizon_y": horizon,
-            "n": int(mask.sum()),
-            "events": n_events,
-            "mean_auc": mean_auc,
-            "std_auc": std_auc,
-        })
+            with open(f"results/xgboost_{fs_name}_{label}.txt", "w") as f:
+                f.write(f"feature_set={fs_name}\n")
+                f.write(f"features={','.join(feature_cols)}\n")
+                f.write(f"n={res['n']}\n")
+                f.write(f"events={res['n_events']}\n")
+                f.write(f"horizon_y={horizon}\n")
+                f.write(f"mean_auc={res['mean_auc']:.4f}\n")
+                f.write(f"std_auc={res['std_auc']:.4f}\n")
+                f.write(f"fold_aucs={res['fold_aucs']}\n")
+                f.write(f"{CAVEAT_UNWEIGHTED}\n")
+                f.write(f"{CAVEAT_BINARY}\n")
+            summary_rows.append({
+                "feature_set": fs_name,
+                "label": label,
+                "horizon_y": horizon,
+                "n": res["n"],
+                "events": res["n_events"],
+                "mean_auc": res["mean_auc"],
+                "std_auc": res["std_auc"],
+            })
 
     if summary_rows:
         pd.DataFrame(summary_rows).to_csv(

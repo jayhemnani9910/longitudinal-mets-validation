@@ -41,11 +41,11 @@ for (s in scores) {
   rows <- !is.na(df[[s]])
   df_s <- df[rows, ]
 
-  # Survey-weighted Fine-Gray subdistribution hazard ratio (per-SD-free, raw
-  # score scale). finegray() + weighted Cox carries the MEC weight; robust SE
-  # is clustered on the PSU.
+  # Survey-weighted Fine-Gray subdistribution hazard ratio (raw score scale).
+  # finegray() + weighted Cox carries the fasting-subsample weight (WTSAF2YR);
+  # robust SE is clustered on the PSU.
   fg <- weighted_finegray_hr(df_s, s, "followup_years", "competing_cv",
-                             "wt_mec", "cluster_id", cause = 1)
+                             "wt_fast", "cluster_id", cause = 1)
   fit <- fg
 
   # Time-dependent AUC for cause-specific outcome. 10y horizon operationalized

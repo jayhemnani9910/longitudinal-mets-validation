@@ -33,19 +33,22 @@ findrisc <- function(age, bmi, waist, sex,
                else if (age < 65) 3L
                else 4L
 
-  # BMI points (0-3)
+  # BMI points (0-3). Lindstrom & Tuomilehto 2003: <25=0, 25-30=1, >30=3, so
+  # the 30 boundary belongs to the 1-point band (the >30 band is strict).
   pts <- pts + if (bmi < 25) 0L
-               else if (bmi < 30) 1L
+               else if (bmi <= 30) 1L
                else 3L
 
-  # Waist points (0-4, sex-specific)
+  # Waist points (0-4, sex-specific). Source bands are 94-102 (men) and 80-88
+  # (women) at 3 points, with the >102 / >88 bands strict, so the upper
+  # boundary value stays in the 3-point band.
   pts <- pts + if (sex == "male") {
     if (waist < 94) 0L
-    else if (waist < 102) 3L
+    else if (waist <= 102) 3L
     else 4L
   } else {
     if (waist < 80) 0L
-    else if (waist < 88) 3L
+    else if (waist <= 88) 3L
     else 4L
   }
 

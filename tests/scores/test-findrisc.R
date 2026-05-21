@@ -55,6 +55,23 @@ test_that("findrisc components add as expected for a known example", {
   expect_equal(pts, 13L)
 })
 
+test_that("findrisc upper-boundary values fall in the lower band (Lindstrom 2003)", {
+  base <- function(bmi, waist, sex) findrisc(
+    age = 30, bmi = bmi, waist = waist, sex = sex,
+    physical_active = TRUE, daily_vegetables = TRUE,
+    bp_treatment = FALSE, prior_high_glucose = FALSE, family_history = "none"
+  )
+  # BMI exactly 30 belongs to the 25-30 band (1 pt); just above is 3 pts.
+  expect_equal(base(30, 70, "male"), 1L)
+  expect_equal(base(30.01, 70, "male"), 3L)
+  # Male waist exactly 102 belongs to the 94-102 band (3 pts); above is 4.
+  expect_equal(base(22, 102, "male"), 3L)
+  expect_equal(base(22, 102.1, "male"), 4L)
+  # Female waist exactly 88 belongs to the 80-88 band (3 pts); above is 4.
+  expect_equal(base(22, 88, "female"), 3L)
+  expect_equal(base(22, 88.1, "female"), 4L)
+})
+
 test_that("findrisc handles NA gracefully", {
   expect_true(is.na(findrisc(
     age = NA, bmi = 25, waist = 90, sex = "male",

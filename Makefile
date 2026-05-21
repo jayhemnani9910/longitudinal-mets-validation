@@ -1,11 +1,11 @@
-.PHONY: all data scores analyses dca subgroups bootstrap manuscript clean test
+.PHONY: all data scores analyses dca tables bootstrap manuscript clean test
 
 # Use --no-init-file to skip .Rprofile / renv auto-activation so that
 # the explicit .libPaths() call in each script takes effect.
 RSCRIPT := Rscript --no-init-file
 
-# End-to-end
-all: data scores analyses dca subgroups manuscript
+# End-to-end (bootstrap is excluded; it is a separate ~4h target)
+all: data scores analyses dca tables manuscript
 
 # Phase 1: Data + scores
 data:
@@ -29,11 +29,12 @@ dca:
 	$(RSCRIPT) scripts/09_pairwise_comparisons.R
 	uv run python scripts/10_xgboost_sensitivity.py
 
-# Phase 6: Subgroups
-subgroups:
-	$(RSCRIPT) scripts/11_subgroup_sex.R
-	$(RSCRIPT) scripts/12_subgroup_race.R
-	$(RSCRIPT) scripts/13_subgroup_age.R
+# Phase 6: Table 1, calibration curves, subgroups, and the B9 US-refit
+tables:
+	$(RSCRIPT) scripts/11_table1.R
+	$(RSCRIPT) scripts/12_calibration_curves.R
+	$(RSCRIPT) scripts/13_subgroups.R
+	$(RSCRIPT) scripts/15_b9_refit.R
 
 # Phase 8: Bootstrap sensitivity (500 PSU-cluster resamples, ~4h wall)
 # Toggle rep count via N_REPS env var. Default in script is 10 for smoke tests.
@@ -49,9 +50,9 @@ bootstrap-smoke:
 manuscript:
 	cd manuscript && pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
 
-# Run all R tests
+# Run all R tests (the score unit tests live in tests/scores)
 test:
-	$(RSCRIPT) -e 'testthat::test_dir("tests")'
+	$(RSCRIPT) -e 'testthat::test_dir("tests/scores")'
 
 clean:
 	rm -rf results/cache/

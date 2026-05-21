@@ -45,7 +45,7 @@ for (s in scores) {
   # Survey-weighted Fine-Gray on the 15y frame and broadened cause definition
   # built in script 03 (followup_years_dm + competing_dm).
   fg <- weighted_finegray_hr(df_s, s, "followup_years_dm", "competing_dm",
-                             "wt_mec", "cluster_id", cause = 1)
+                             "wt_fast", "cluster_id", cause = 1)
   fit <- fg
 
   # Time-dependent AUC at 5y, 10y, and the 15y horizon operationalized as

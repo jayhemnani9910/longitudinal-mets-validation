@@ -250,6 +250,11 @@ inc_rows <- !is.na(df$findrisc_score) & !is.na(df$rmrs_score) &
 df_i <- df[inc_rows, ]
 df_i$event_cause1 <- as.integer(df_i[[meta_dm$delta_col]] == 1)
 
+# The incremental NRI/IDI use a cause-specific hazard model: competing deaths
+# (code 2) are treated as censored, which is the standard input for
+# survIDINRI::IDI.INF. The primary discrimination and hazard-ratio analyses
+# elsewhere use the Fine-Gray subdistribution model; this difference is
+# intentional and noted in the manuscript methods.
 cox_base <- coxph(Surv(followup_years_dm, event_cause1) ~ findrisc_score, data = df_i)
 cox_full <- coxph(Surv(followup_years_dm, event_cause1) ~ findrisc_score + rmrs_score,
                   data = df_i)

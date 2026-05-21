@@ -75,6 +75,12 @@ cr_net_benefit_all <- function(time, status, cause, horizon, threshold) {
 # competing = TRUE uses the Fine-Gray CIF (riskRegression::predictRisk on FGR);
 # competing = FALSE uses 1 - Cox survival. status_col is the competing-risk
 # status (0/1/2) when competing, or the 0/1 event indicator otherwise.
+#
+# Note on optimism: the recalibration model is fit on df_s and predictions are
+# read back on the same df_s, so the resulting net-benefit curves describe
+# apparent (in-sample) performance. Out-of-sample net benefit would require a
+# cross-fit or held-out recalibration. The manuscript discloses this; the DCA
+# is a secondary, exploratory analysis.
 recalibrated_risk <- function(df_in, score, time_col, status_col, cause,
                               horizon, competing) {
   ok <- !is.na(df_in[[score]]) & !is.na(df_in[[time_col]]) &

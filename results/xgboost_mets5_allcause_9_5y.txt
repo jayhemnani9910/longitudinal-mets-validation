@@ -1,0 +1,10 @@
+feature_set=mets5
+features=waist_cm,sbp,dbp,hdl,fasting_glucose,triglycerides
+n=17031
+events=774
+horizon_y=9.5
+mean_auc=0.6975
+std_auc=0.0057
+fold_aucs=[0.7072722292316888, 0.7006955898481014, 0.6919546175598317, 0.6945554617980976, 0.6931442261782962]
+caveat=unweighted_AUC_describes_sample_not_weighted_population
+caveat=binary_horizon_capped_label_approximates_IPCW_not_identical

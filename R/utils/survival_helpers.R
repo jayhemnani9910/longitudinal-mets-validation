@@ -24,7 +24,8 @@ suppressMessages({
 weighted_finegray_hr <- function(df, score, time_col, status_col,
                                   weight_col, cluster_col, cause = 1) {
   ok <- !is.na(df[[score]]) & !is.na(df[[time_col]]) &
-        !is.na(df[[status_col]]) & !is.na(df[[weight_col]])
+        !is.na(df[[status_col]]) & !is.na(df[[weight_col]]) &
+        df[[weight_col]] > 0
   d <- df[ok, ]
   if (nrow(d) < 50) return(list(hr = NA, lo = NA, hi = NA, se = NA, n = nrow(d)))
 

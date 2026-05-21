@@ -34,6 +34,16 @@ test_that("framingham_2008 differentiates sex", {
   expect_false(isTRUE(all.equal(risk_m, risk_f)))
 })
 
+test_that("framingham_2008 pinned outputs guard against coefficient drift (D'Agostino 2008)", {
+  # Regression guards anchored to the current implementation, which was
+  # cross-checked against the published Framingham 2008 general-CVD
+  # coefficients and baseline survival. A change flags a transcription drift.
+  expect_equal(framingham_2008(40, "female", 180, 60, 110, FALSE, FALSE, FALSE),
+               0.014653, tolerance = 1e-4)
+  expect_equal(framingham_2008(65, "male", 250, 35, 160, TRUE, TRUE, TRUE),
+               0.917859, tolerance = 1e-4)
+})
+
 test_that("framingham_2008 handles NA gracefully", {
   expect_true(is.na(framingham_2008(
     age = NA, sex = "male",

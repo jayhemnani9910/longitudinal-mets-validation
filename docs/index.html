@@ -25,8 +25,8 @@
   <h2>Headline finding</h2>
   <ul class="tldr">
     <li>For <strong>cardiovascular and all-cause mortality</strong>, the clinical risk equations (Framingham 2008, PCE) clearly dominate the metabolic-syndrome-derived scores. The XGBoost ceiling on the MetS inputs alone does not close the gap.</li>
-    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.014 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
-    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the same inputs exceeds both, so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783), placing the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.</li>
+    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.013 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
+    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the five MetS components alone exceeds both (diabetes-related 0.772, rising to 0.828 with age and sex), so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783), placing the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.</li>
   </ul>
 
   <div class="callout">
@@ -94,7 +94,7 @@
       <tr><th>Contrast</th><th>Outcome (horizon)</th><th class="num">Delta-AUC (95% CI)</th></tr>
     </thead>
     <tbody>
-      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.014 (-0.051, +0.090)</td></tr>
+      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.013 (-0.051, +0.090)</td></tr>
       <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.071 (+0.049, +0.094)</td></tr>
       <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.093 (+0.050, +0.135)</td></tr>
       <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.158 (+0.088, +0.220)</td></tr>
@@ -103,16 +103,16 @@
   </table>
   </div>
 
-  <h3>XGBoost ML ceiling on the metabolic syndrome inputs</h3>
+  <h3>XGBoost ML ceiling: metabolic syndrome components, with and without age and sex</h3>
   <div class="scroll-wrap">
   <table>
     <thead>
-      <tr><th>Outcome (horizon)</th><th class="num">ML AUC</th><th class="num">Top clinical / MetS score</th></tr>
+      <tr><th>Outcome (horizon)</th><th class="num">MetS components only</th><th class="num">+ age, sex</th><th class="num">Top score</th></tr>
     </thead>
     <tbody>
-      <tr><td>All-cause (9.5y)</td><td class="num">0.813</td><td class="num">Framingham 0.810 (no headroom)</td></tr>
-      <tr><td>Cardiovascular (9.5y)</td><td class="num">0.817</td><td class="num">Framingham 0.858 (clinical above ML)</td></tr>
-      <tr><td>Diabetes-related (14.5y)</td><td class="num">0.828</td><td class="num">FINDRISC 0.770 (6 to 8 AUC pts of headroom)</td></tr>
+      <tr><td>All-cause (9.5y)</td><td class="num">0.698</td><td class="num">0.813</td><td class="num">Framingham 0.810</td></tr>
+      <tr><td>Cardiovascular (9.5y)</td><td class="num">0.746</td><td class="num">0.817</td><td class="num">Framingham 0.858</td></tr>
+      <tr><td>Diabetes-related (14.5y)</td><td class="num">0.772</td><td class="num">0.828</td><td class="num">FINDRISC 0.770, RMRS 0.752</td></tr>
     </tbody>
   </table>
   </div>

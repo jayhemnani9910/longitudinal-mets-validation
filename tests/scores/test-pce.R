@@ -25,6 +25,18 @@ test_that("pce returns plausible 10-year risk for a high-risk older adult", {
   expect_gt(risk, 0.20)  # expect >20% 10-year ASCVD risk
 })
 
+test_that("pce pinned outputs guard against coefficient drift (Goff 2014)", {
+  # Regression guards: values from the current implementation, which was
+  # cross-checked against the published ACC/AHA Pooled Cohort coefficients.
+  # A change here means a coefficient or baseline-survival constant moved.
+  expect_equal(pce(45, "female", "white", 180, 60, 110, FALSE, FALSE, FALSE),
+               0.004416, tolerance = 1e-4)
+  expect_equal(pce(65, "male", "white", 250, 35, 160, TRUE, TRUE, TRUE),
+               0.613124, tolerance = 1e-4)
+  expect_equal(pce(55, "male", "black", 200, 45, 140, FALSE, FALSE, FALSE),
+               0.080495, tolerance = 1e-4)
+})
+
 test_that("pce handles NA gracefully", {
   expect_true(is.na(pce(
     age = NA, sex = "male", race = "white",

@@ -1,0 +1,10 @@
+feature_set=clinical8
+features=waist_cm,sbp,dbp,hdl,fasting_glucose,triglycerides,age,sex_int
+n=13836
+events=72
+horizon_y=14.5
+mean_auc=0.8277
+std_auc=0.0257
+fold_aucs=[0.8392865750783322, 0.8031365217842863, 0.8052526354053072, 0.8721872888842697, 0.8185828390329557]
+caveat=unweighted_AUC_describes_sample_not_weighted_population
+caveat=binary_horizon_capped_label_approximates_IPCW_not_identical
