@@ -62,8 +62,7 @@ def ensure_csv():
         [
             "Rscript", "--no-init-file", "-e",
             (
-                '.libPaths("/home/po/projects/work/longitudinal-mets-validation/'
-                'renv/library/R-4.3/x86_64-pc-linux-gnu"); '
+                '.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu"); '
                 'df <- readRDS("data/processed/cohort_with_scores.rds"); '
                 'write.csv(df, "data/processed/cohort_with_scores.csv", row.names = FALSE)'
             ),
@@ -138,6 +137,7 @@ def evaluate(df, feature_cols, event_col, time_col, horizon, cc_only,
             learning_rate=0.05,
             subsample=0.8,
             eval_metric="auc",
+            random_state=0,
         )
         model.fit(x_train, ym[train_idx])
         proba = model.predict_proba(x_test)[:, 1]

@@ -18,7 +18,7 @@ Result: only their existing 2023 (PLoS One B9), 2024 (PeerJ CS B8), and 2021/202
 **Found one direct competitor publication**:
 
 - **Park J-H, Jeong I, Ko G-J, Jeong S, Lee H. 2025.** "Development of a Predictive Model for Metabolic Syndrome Using Noninvasive Data and its Cardiovascular Disease Risk Assessments: Multicohort Validation Study." *Journal of Medical Internet Research* 27:e67525. PMID 40315452. Korea University College of Medicine + Korea University Guro Hospital.
-  - This is a DIFFERENT team (Korea University, not Dankook + SJSU).
+  - This is a DIFFERENT team (Korea University), not the original RMRS/B9 author group.
   - They built and validated their own MetS noninvasive predictive model with CVD risk assessment, across multicohort data.
   - It does NOT explicitly test RMRS, the B9 decision tree, or the specific Shim/Shin/Oh methodology line.
   - **Implication**: position the current project as the first external longitudinal validation of *the Shim/Shin/Oh-specific scores* (RMRS + B9 tree). Cite Park et al. 2025 in the related-work section as parallel methodology with a different model line.

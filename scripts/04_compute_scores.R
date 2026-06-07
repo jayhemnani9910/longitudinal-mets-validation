@@ -9,7 +9,7 @@
 # Run after scripts/03_apply_inclusion.R has produced
 # data/processed/analysis_cohort.rds.
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(dplyr)
@@ -43,11 +43,16 @@ df$rmrs_score <- mapply(
 )
 
 # ---- B9 decision tree -------------------------------------------------------
+# The published B9 tree (Shin 2023, S1 Table) was trained on Korean-threshold-
+# scaled waist/BP features, so it is applied faithfully with ethnicity = "kr"
+# (Korean waist thresholds 90/85), matching the Figure 7 worked example. Applying
+# the Korean-calibrated splits to US-threshold-scaled features would misalign the
+# routing. RMRS keeps US thresholds (the RMRS paper applied it to US NHANES).
 message("Computing B9 tree predictions ...")
 df$b9_features <- mapply(
   b9_features,
   df$waist_cm, df$sbp, df$dbp, as.character(df$sex),
-  MoreArgs = list(ethnicity = "us"),
+  MoreArgs = list(ethnicity = "kr"),
   SIMPLIFY = FALSE
 )
 df$BPWC_add <- sapply(df$b9_features, `[[`, "BPWC_add")

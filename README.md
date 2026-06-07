@@ -4,16 +4,16 @@ External longitudinal validation of two metabolic syndrome risk scoring methods 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Manuscript: draft](https://img.shields.io/badge/Manuscript-draft-orange.svg)](manuscript/main.pdf)
-[![Pre-registration: drafted](https://img.shields.io/badge/Pre--registration-drafted-yellow.svg)](prereg/osf-preregistration-draft.md)
+[![Study protocol: included](https://img.shields.io/badge/Study%20protocol-included-blue.svg)](prereg/osf-preregistration-draft.md)
 [![Language: R](https://img.shields.io/badge/Language-R%204.3.3-276DC3.svg)](https://www.r-project.org/)
 
 ## Headline finding
 
 Outcome-specific value.
 
-- For **cardiovascular and all-cause mortality**, the established clinical risk equations dominate. Framingham 2008 reaches AUC 0.858 at 9.5 years for cardiovascular mortality and 0.810 for all-cause; the metabolic-syndrome-derived RMRS lands at 0.660 and 0.600 respectively.
-- For **diabetes-related mortality**, RMRS competes head-to-head with FINDRISC at 14.5 years (AUC 0.752 vs 0.770; delta-AUC +0.013 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (continuous NRI 0.139, IDI 0.0042, both CIs exclude zero). The FINDRISC comparator uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.
-- The **B9 decision tree** is consistently outperformed by the continuous RMRS on every outcome (delta-AUC +0.071 all-cause, +0.093 cardiovascular, +0.158 diabetes-related; all CIs exclude zero). An XGBoost ceiling on the five MetS components alone exceeds both (diabetes-related 0.772, rising to 0.828 once age and sex are added), so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783, above RMRS on the same held-out subjects), which places the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.
+- For **cardiovascular and all-cause mortality**, the established clinical risk equations clearly win. Framingham 2008 reaches AUC 0.858 at 9.5 years for cardiovascular mortality and 0.810 for all-cause; the metabolic-syndrome-derived RMRS lands at 0.660 and 0.600 respectively.
+- For **diabetes-related mortality**, RMRS and FINDRISC are statistically indistinguishable at 14.5 years (RMRS 0.752 vs FINDRISC 0.770; primary IPCW time-dependent delta-AUC -0.020, within-stratum bootstrap 95% CI -0.068 to +0.028). The lower bound falls below the -0.05 margin, so non-inferiority is not established on the primary metric; FINDRISC is the numerically stronger of the two on the primary AUC. A secondary binary-outcome DeLong delta was +0.013 (-0.043, +0.063), reported for comparison only. RMRS still adds modest incremental value on top of FINDRISC (continuous NRI 0.139 [0.047, 0.267], IDI 0.004 [0.001, 0.009], both cluster-bootstrap CIs exclude zero). The FINDRISC comparator uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.
+- The **B9 decision tree**, reconstructed in full (22 leaves) from the paper's S1 ruleset and applied with its native Korean feature scaling, is competitive with RMRS rather than dominated by it. RMRS exceeds it only modestly (primary IPCW delta-AUC +0.014 all-cause [CI 0.000, 0.029], +0.029 cardiovascular [-0.003, 0.064], +0.060 diabetes-related [0.015, 0.110]), and the two are statistically close on all-cause mortality. On a held-out split the transported tree already reaches 0.764 for diabetes-related mortality, above RMRS at 0.735, and a US refit reaches 0.83. An XGBoost ceiling on the five MetS components alone reaches 0.772 for diabetes-related mortality (0.828 with age and sex). The earlier impression that RMRS dominates the tree came from a degraded three-value reconstruction of the published model, not a methodological gap.
 
 ## At a glance
 
@@ -23,10 +23,10 @@ Outcome-specific value.
 | Cohort N | 17,031 adults aged 20 to 79 years (fasting subsample); 13,836 in the 1999 to 2014 cause-coded subcohort for CV and diabetes outcomes |
 | Outcomes | all-cause (n=806, full cohort), cardiovascular (n=173), diabetes-related (n=77, broadened) mortality |
 | Scores tested | RMRS, B9 tree, ACC/AHA PCE, Framingham 2008, FINDRISC |
-| Inference | survey-weighted Fine-Gray competing risks + Cox; IPCW time-dependent AUC; competing-risks DCA with Fine-Gray CIF recalibration; 500-rep PSU-cluster bootstrap |
+| Inference | survey-weighted Fine-Gray competing risks + Cox; IPCW time-dependent AUC (unweighted primary + survey-weighted sensitivity); competing-risks DCA with Fine-Gray CIF recalibration; 500-rep within-stratum PSU-cluster bootstrap (AUC, delta-AUC, IDI/NRI, net benefit) |
 | Target venue | JAMA Network Open / npj Digital Medicine |
 
-Full results in `results/*_summary.csv`. Rendered manuscript at [`manuscript/main.pdf`](manuscript/main.pdf). Pre-registered analysis plan at [`prereg/osf-preregistration-draft.md`](prereg/osf-preregistration-draft.md).
+Full results in `results/*_summary.csv`. Rendered manuscript at [`manuscript/main.pdf`](manuscript/main.pdf). Study protocol and analysis plan at [`prereg/osf-preregistration-draft.md`](prereg/osf-preregistration-draft.md).
 
 ## Repository structure
 
@@ -39,7 +39,7 @@ Full results in `results/*_summary.csv`. Rendered manuscript at [`manuscript/mai
 ├── data/           Raw NHANES + LMF (gitignored, regeneratable via Makefile)
 ├── results/        Output tables, plots, cached models
 ├── manuscript/     LaTeX source + rendered PDF
-├── prereg/         OSF pre-registration draft + literature scan
+├── prereg/         study protocol + analysis plan + literature scan
 ├── diagrams/       D2 source + SVG renders of the pipeline, structure, and scoring system
 └── docs/           Static landing page for GitHub Pages
 ```
@@ -60,9 +60,9 @@ Or `make all` for the full pipeline end to end.
 
 The R environment is managed via `renv` with `rms` pinned to 6.7-1 (CRAN archive) for compatibility with R 4.3.3. Python uses `uv` with the lockfile checked in. System dependencies (libxml2, libcurl, libssl, libgsl, fontconfig, freetype, harfbuzz, fribidi, libpng, libtiff, libjpeg) are listed in `DESCRIPTION`.
 
-## Pre-registration
+## Study protocol
 
-The full analysis plan, including hypothesis structure (H1 through H5), inclusion criteria, score implementations, outcome definitions, IPCW time-dependent AUC horizons, decision curve analysis thresholds, and pre-specified sensitivity analyses, is documented in [`prereg/osf-preregistration-draft.md`](prereg/osf-preregistration-draft.md). OSF submission with timestamped registration is pending.
+The full analysis plan, including hypothesis structure (H1 through H5), inclusion criteria, score implementations, outcome definitions, IPCW time-dependent AUC horizons, decision curve analysis thresholds, and pre-specified sensitivity analyses, is documented in [`prereg/osf-preregistration-draft.md`](prereg/osf-preregistration-draft.md). This is a transparent written protocol included in the repository alongside the code and results, not a timestamped prospective registration.
 
 ## Citation
 

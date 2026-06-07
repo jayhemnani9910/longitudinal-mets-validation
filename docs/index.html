@@ -12,9 +12,9 @@
 
 <header class="title">
   <h1>External longitudinal validation of metabolic syndrome risk scores for cardiovascular, diabetes, and all-cause mortality in the US NHANES Linked Mortality File</h1>
-  <p class="subtitle">Pre-registered observational cohort study, NHANES 1999 to 2018 linked to the NHANES Linked Mortality File 2019 release.</p>
+  <p class="subtitle">Observational cohort study with a written protocol, NHANES 1999 to 2018 linked to the NHANES Linked Mortality File 2019 release.</p>
   <div class="meta">
-    <span class="badge">Pre-registered</span>
+    <span class="badge">Study protocol</span>
     <span class="badge neutral">Manuscript draft on origin/master</span>
     <span class="badge neutral">Target: JAMA Network Open / npj Digital Medicine</span>
     <span class="badge neutral">Author: Jay Hemnani</span>
@@ -25,12 +25,12 @@
   <h2>Headline finding</h2>
   <ul class="tldr">
     <li>For <strong>cardiovascular and all-cause mortality</strong>, the clinical risk equations (Framingham 2008, PCE) clearly dominate the metabolic-syndrome-derived scores. The XGBoost ceiling on the MetS inputs alone does not close the gap.</li>
-    <li>For <strong>diabetes-related mortality</strong>, RMRS competes head-to-head with FINDRISC on point discrimination (delta-AUC +0.013 favoring RMRS, 95% bootstrap CI -0.051 to +0.090) and gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
-    <li>The <strong>B9 decision tree</strong> is consistently outperformed by the continuous RMRS on every outcome, and the XGBoost ceiling on the five MetS components alone exceeds both (diabetes-related 0.772, rising to 0.828 with age and sex), so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination (diabetes-related AUC 0.783), placing the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.</li>
+    <li>For <strong>diabetes-related mortality</strong>, RMRS and FINDRISC are statistically indistinguishable on point discrimination (primary IPCW time-dependent delta-AUC -0.020, 95% bootstrap CI -0.068 to +0.028; FINDRISC numerically higher at 0.770 vs 0.752), and RMRS gives modest incremental value when stacked on FINDRISC (IDI 0.0042, continuous NRI 0.139, both CIs exclude zero). The FINDRISC comparator now uses NHANES-derived family history, prediabetes, and physical-activity items rather than placeholders.</li>
+    <li>The <strong>B9 decision tree</strong>, reconstructed in full (22 leaves) with its native Korean feature scaling, is competitive with RMRS rather than dominated by it; RMRS exceeds it only modestly (primary IPCW delta-AUC +0.014 all-cause, +0.029 cardiovascular, +0.060 diabetes-related). The XGBoost ceiling on the five MetS components alone exceeds both (diabetes-related 0.772, rising to 0.828 with age and sex), so the MetS signal is not the constraint. A CART refit on a held-out NHANES split recovers RMRS-level discrimination, placing the B9 gap on the transportability of the Korean-calibrated splits rather than on the tree method itself.</li>
   </ul>
 
   <div class="callout">
-    <strong>Pre-registered H3 read.</strong> The bootstrap 95% percentile lower bound at -0.051 sits 0.001 AUC units below the registered -0.05 non-inferiority margin, so the test does not formally establish non-inferiority, though the miss is smaller than the bootstrap resampling resolution. The DeLong-based CI was similar at -0.053 to +0.080. Both intervals locate RMRS and FINDRISC within a narrow band, and the point estimate favors RMRS.
+    <strong>H3 read.</strong> The primary metric is the paired IPCW time-dependent delta-AUC. Its bootstrap 95% percentile interval is -0.068 to +0.028, with a point estimate of -0.020; the lower bound falls below the -0.05 non-inferiority margin, so non-inferiority is not established on the primary metric. A secondary binary-outcome DeLong delta was +0.013 (-0.043 to +0.063) and would have cleared the margin, but it uses a different outcome encoding and is reported only for comparison. FINDRISC is numerically higher on the primary AUC, and the two scores are best read as statistically indistinguishable on this outcome.
   </div>
 </section>
 
@@ -46,8 +46,8 @@
   <h2>Diagrams</h2>
 
   <figure>
-    <img src="diagrams/pipeline.svg" alt="Pipeline diagram: data flow from raw NHANES and LMF inputs through scripts 01 to 14, ending in manuscript and OSF prereg outputs.">
-    <figcaption>Pipeline. Raw NHANES and LMF inputs flow through cohort assembly, score computation, three parallel survival analyses, decision curve analysis, pairwise comparisons, and the XGBoost ML ceiling, with the 500-rep PSU-cluster bootstrap as the registered sensitivity.</figcaption>
+    <img src="diagrams/pipeline.svg" alt="Pipeline diagram: data flow from raw NHANES and LMF inputs through scripts 01 to 14, ending in manuscript and protocol outputs.">
+    <figcaption>Pipeline. Raw NHANES and LMF inputs flow through cohort assembly, score computation, three parallel survival analyses, decision curve analysis, pairwise comparisons, and the XGBoost ML ceiling, with the 500-rep PSU-cluster bootstrap as the protocol sensitivity analysis.</figcaption>
   </figure>
 
   <figure>
@@ -57,7 +57,7 @@
 
   <figure>
     <img src="diagrams/structure.svg" alt="Repo directory tree: scripts, R/scores, R/utils, tests, data, results, manuscript, prereg, diagrams.">
-    <figcaption>Repository structure. Code lives in <code>scripts/</code>, <code>R/scores/</code>, and <code>R/utils/</code>. Outputs land in <code>results/</code>. The OSF pre-registration draft is in <code>prereg/</code> and the manuscript LaTeX source plus rendered PDF in <code>manuscript/</code>.</figcaption>
+    <figcaption>Repository structure. Code lives in <code>scripts/</code>, <code>R/scores/</code>, and <code>R/utils/</code>. Outputs land in <code>results/</code>. The study protocol and analysis plan are in <code>prereg/</code> and the manuscript LaTeX source plus rendered PDF in <code>manuscript/</code>.</figcaption>
   </figure>
 </section>
 
@@ -87,18 +87,18 @@
   </table>
   </div>
 
-  <h3>Registered pairwise delta-AUC contrasts</h3>
+  <h3>Protocol pairwise delta-AUC contrasts (primary IPCW time-dependent metric)</h3>
   <div class="scroll-wrap">
   <table>
     <thead>
       <tr><th>Contrast</th><th>Outcome (horizon)</th><th class="num">Delta-AUC (95% CI)</th></tr>
     </thead>
     <tbody>
-      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">+0.013 (-0.051, +0.090)</td></tr>
-      <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.071 (+0.049, +0.094)</td></tr>
-      <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.093 (+0.050, +0.135)</td></tr>
-      <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.158 (+0.088, +0.220)</td></tr>
-      <tr><td>PCE vs Framingham (H2)</td><td>Cardiovascular (9.5y)</td><td class="num">+0.007 (-0.010, +0.022)</td></tr>
+      <tr><td>RMRS vs FINDRISC (H3 non-inferiority)</td><td>Diabetes-related (14.5y)</td><td class="num">-0.020 (-0.068, +0.028)</td></tr>
+      <tr><td>RMRS vs B9</td><td>All-cause (9.5y)</td><td class="num">+0.014 (+0.000, +0.029)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Cardiovascular (9.5y)</td><td class="num">+0.029 (-0.003, +0.064)</td></tr>
+      <tr><td>RMRS vs B9</td><td>Diabetes-related (14.5y)</td><td class="num">+0.060 (+0.015, +0.110)</td></tr>
+      <tr><td>PCE vs Framingham (H2)</td><td>Cardiovascular (9.5y)</td><td class="num">+0.009 (-0.001, +0.021)</td></tr>
     </tbody>
   </table>
   </div>
@@ -119,12 +119,12 @@
 </section>
 
 <section id="links">
-  <h2>Code, draft, and pre-registration</h2>
+  <h2>Code, draft, and protocol</h2>
   <ul class="links-list">
     <li><span class="label">Source repository</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation">github.com/jayhemnani9910/longitudinal-mets-validation</a></li>
     <li><span class="label">Manuscript PDF</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/manuscript/main.pdf">manuscript/main.pdf</a></li>
-    <li><span class="label">Pre-registration draft</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/prereg/osf-preregistration-draft.md">prereg/osf-preregistration-draft.md</a></li>
-    <li><span class="label">OSF registration</span> <span style="color: var(--muted);">pending submission</span></li>
+    <li><span class="label">Study protocol</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/prereg/osf-preregistration-draft.md">prereg/osf-preregistration-draft.md</a></li>
+    <li><span class="label">Registration</span> <span style="color: var(--muted);">retrospective protocol in repository; not a prospective registration</span></li>
     <li><span class="label">Result CSVs</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/results">results/ (allcause, cv, dm, pairwise, dca, xgboost, bootstrap)</a></li>
     <li><span class="label">Pipeline source</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/scripts">scripts/01 to 14</a></li>
   </ul>

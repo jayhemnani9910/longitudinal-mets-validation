@@ -35,7 +35,7 @@
 # Inputs:  data/processed/cohort_with_scores.rds
 # Outputs: results/pairwise_comparisons.{rds,csv}, results/incremental_dm.{rds,csv}
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(timeROC)
@@ -187,6 +187,7 @@ for (p in pairs) {
     events_in_horizon = dl$events,
     auc_score1_ipcw = auc1_ipcw,
     auc_score2_ipcw = auc2_ipcw,
+    delta_auc_ipcw = auc1_ipcw - auc2_ipcw,
     auc_score1_binary = dl$auc1,
     auc_score2_binary = dl$auc2,
     delta_auc_binary = dl$delta,
@@ -201,7 +202,9 @@ for (p in pairs) {
                   p$score1, auc1_ipcw, p$score2, auc2_ipcw))
   message(sprintf("  Binary  AUC(%s)=%.3f  AUC(%s)=%.3f",
                   p$score1, dl$auc1, p$score2, dl$auc2))
-  message(sprintf("  delta-AUC (binary) = %.3f (95%% CI %.3f, %.3f)  DeLong p=%.4g",
+  message(sprintf("  delta-AUC (IPCW, primary) = %.3f",
+                  auc1_ipcw - auc2_ipcw))
+  message(sprintf("  delta-AUC (binary, secondary) = %.3f (95%% CI %.3f, %.3f)  DeLong p=%.4g",
                   dl$delta, dl$lo, dl$hi, dl$p))
 }
 
@@ -218,6 +221,7 @@ summary_tbl <- do.call(rbind, lapply(names(results), function(nm) {
     events_in_horizon = r$events_in_horizon,
     auc_score1_ipcw   = r$auc_score1_ipcw,
     auc_score2_ipcw   = r$auc_score2_ipcw,
+    delta_auc_ipcw    = r$delta_auc_ipcw,
     auc_score1_binary = r$auc_score1_binary,
     auc_score2_binary = r$auc_score2_binary,
     delta_auc_binary  = r$delta_auc_binary,

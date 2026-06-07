@@ -31,7 +31,7 @@
 #   results/bootstrap_dca_netbenefit.csv
 #   results/cache/bootstrap.log (via tee in the calling Makefile target)
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(timeROC)
@@ -39,6 +39,7 @@ suppressMessages({
   library(riskRegression)
   library(prodlim)
   library(pROC)
+  library(survIDINRI)
   library(dplyr)
 })
 
@@ -68,10 +69,18 @@ df$cluster_id <- paste(df$sdmvstra, df$sdmvpsu, sep = "_")
 clusters_all <- sort(unique(df$cluster_id))
 n_clusters <- length(clusters_all)
 
-message(sprintf("Cohort N = %d, PSU clusters = %d", nrow(df), n_clusters))
-
 # Pre-split row indices by cluster so resampling is index-only.
 cluster_rows <- split(seq_len(nrow(df)), df$cluster_id)
+
+# Map each design stratum (sdmvstra) to its PSU clusters, so the bootstrap can
+# resample PSUs WITHIN strata (the NHANES-appropriate scheme) rather than from
+# the pooled cluster set.
+uc <- unique(df[, c("sdmvstra", "cluster_id")])
+strata_to_clusters <- split(uc$cluster_id, uc$sdmvstra)
+n_strata <- length(strata_to_clusters)
+
+message(sprintf("Cohort N = %d, PSU clusters = %d, design strata = %d",
+                nrow(df), n_clusters, n_strata))
 
 #-----------------------------------------------------------------------
 # Registered AUC quantities (score x outcome x horizon)
@@ -153,6 +162,26 @@ timeroc_point_auc <- function(time_v, delta_v, marker, cause, horizon) {
   as.numeric(v[length(v)])
 }
 
+# Paired IPCW time-dependent delta-AUC (timeROC) on the common non-missing
+# subsample: delta = AUC(marker1) - AUC(marker2) at the horizon, both fit on the
+# same rows. This is the registered PRIMARY discrimination metric and the basis
+# of the H3 non-inferiority test; delong_delta() below is the SECONDARY
+# binary-outcome check, kept for comparison only.
+timeroc_delta <- function(df_p, marker1, marker2, time_col, delta_col,
+                          cause, horizon) {
+  time_v  <- df_p[[time_col]]
+  delta_v <- df_p[[delta_col]]
+  keep <- !is.na(time_v) & !is.na(delta_v) &
+          !is.na(df_p[[marker1]]) & !is.na(df_p[[marker2]])
+  if (sum(keep) < 50) return(NA_real_)
+  a1 <- timeroc_point_auc(time_v[keep], delta_v[keep], df_p[[marker1]][keep],
+                          cause, horizon)
+  a2 <- timeroc_point_auc(time_v[keep], delta_v[keep], df_p[[marker2]][keep],
+                          cause, horizon)
+  if (is.na(a1) || is.na(a2)) return(NA_real_)
+  a1 - a2
+}
+
 # Delta-AUC point estimate via DeLong on horizon-cap binary outcome, paired.
 # Returns numeric scalar (delta = AUC1 - AUC2) or NA.
 delong_delta <- function(df_p, marker1, marker2, time_col, delta_col,
@@ -173,6 +202,36 @@ delong_delta <- function(df_p, marker1, marker2, time_col, delta_col,
                  error = function(e) NULL)
   if (is.null(r1) || is.null(r2)) return(NA_real_)
   as.numeric(pROC::auc(r1) - pROC::auc(r2))
+}
+
+# Tie-aware survey-weighted AUC (weighted c-statistic) on a binary label. The
+# primary IPCW timeROC AUC is unweighted; this gives the survey-weighted
+# discrimination as a sensitivity, to show the design effect on a rank metric.
+weighted_auc <- function(marker, y, w) {
+  ok <- !is.na(marker) & !is.na(y) & !is.na(w) & w > 0
+  marker <- marker[ok]; y <- y[ok]; w <- w[ok]
+  if (length(unique(y)) < 2) return(NA_real_)
+  Wp <- sum(w[y == 1]); Wn <- sum(w[y == 0])
+  if (Wp == 0 || Wn == 0) return(NA_real_)
+  ord <- order(marker)
+  mv <- marker[ord]; yv <- y[ord]; wv <- w[ord]
+  grp <- cumsum(!duplicated(mv))            # ascending unique-value groups
+  posW <- tapply(wv * (yv == 1), grp, sum)
+  negW <- tapply(wv * (yv == 0), grp, sum)
+  posW[is.na(posW)] <- 0; negW[is.na(negW)] <- 0
+  cum_neg_below <- cumsum(c(0, negW))[seq_along(negW)]  # neg weight strictly below
+  sum(posW * (cum_neg_below + 0.5 * negW)) / (Wp * Wn)
+}
+
+# Weighted binary AUC for one score on the horizon-capped outcome (same recoding
+# as delong_delta, but survey-weighted by wt_fast).
+weighted_binary_auc <- function(df_p, marker, time_col, delta_col, cause,
+                                horizon, weight_col = "wt_fast") {
+  time_v  <- df_p[[time_col]]; delta_v <- df_p[[delta_col]]
+  early_censor <- (time_v < horizon) & (delta_v == 0)
+  keep <- !early_censor
+  y <- as.integer((delta_v == cause) & (time_v <= horizon))
+  weighted_auc(df_p[[marker]][keep], y[keep], df_p[[weight_col]][keep])
 }
 
 #-----------------------------------------------------------------------
@@ -203,14 +262,35 @@ one_rep <- function(rep_idx, boot_rows) {
     }
   }
 
+  # Survey-weighted (wt_fast) binary AUC, same score x outcome grid (sensitivity).
+  wauc_out <- list()
+  for (out_name in names(outcomes)) {
+    o <- outcomes[[out_name]]
+    df_o <- frame_for(o)
+    for (s in o$scores) {
+      for (h in o$horizons) {
+        key <- sprintf("%s__%s__t%.1f", s, out_name, h)
+        wauc_out[[key]] <- weighted_binary_auc(
+          df_o, s, o$time_col, o$delta_col, o$cause, h
+        )
+      }
+    }
+  }
+
+  # Primary delta-AUC = paired IPCW timeROC delta; secondary = binary DeLong.
   delta_out <- list()
+  delta_bin_out <- list()
   for (p in pairs) {
     o <- outcomes[[p$outcome]]
     df_o <- frame_for(o)
     for (h in o$horizons) {
       key <- sprintf("%s_vs_%s__%s__t%.1f",
                      p$score1, p$score2, p$outcome, h)
-      delta_out[[key]] <- delong_delta(
+      delta_out[[key]] <- timeroc_delta(
+        df_o, p$score1, p$score2,
+        o$time_col, o$delta_col, o$cause, h
+      )
+      delta_bin_out[[key]] <- delong_delta(
         df_o, p$score1, p$score2,
         o$time_col, o$delta_col, o$cause, h
       )
@@ -235,9 +315,37 @@ one_rep <- function(rep_idx, boot_rows) {
     }
   }
 
+  # H4 incremental value: IDI + continuous NRI for adding RMRS to FINDRISC on
+  # diabetes mortality (t=14.5). Computed inside the cluster bootstrap so the CI
+  # respects the survey design; survIDINRI's own perturbation (used for the
+  # point estimate in script 09) treats rows as i.i.d. and is anticonservative.
+  # npert=0 returns the point estimates only (the bootstrap supplies the CI).
+  idinri_out <- c(idi = NA_real_, nri = NA_real_)
+  do <- frame_for(outcomes$dm)
+  ok <- !is.na(do$rmrs_score) & !is.na(do$findrisc_score) &
+        !is.na(do$followup_years_dm) & !is.na(do$competing_dm)
+  do <- do[ok, , drop = FALSE]
+  if (nrow(do) > 50 && sum(do$competing_dm == 1) >= 10) {
+    indata <- as.matrix(data.frame(
+      time   = do$followup_years_dm,
+      status = as.integer(do$competing_dm == 1)))   # cause-specific: competing censored
+    covs0 <- as.matrix(do[, "findrisc_score", drop = FALSE])
+    covs1 <- as.matrix(do[, c("findrisc_score", "rmrs_score")])
+    res <- tryCatch(
+      survIDINRI::IDI.INF(indata, covs0, covs1, t0 = 14.5, npert = 0),
+      error = function(e) NULL)
+    if (!is.null(res)) {
+      idinri_out["idi"] <- as.numeric(res$m1[1])
+      idinri_out["nri"] <- as.numeric(res$m2[1])
+    }
+  }
+
   list(auc = unlist(auc_out, use.names = TRUE),
+       wauc = unlist(wauc_out, use.names = TRUE),
        delta_auc = unlist(delta_out, use.names = TRUE),
-       dca_nb = unlist(nb_out, use.names = TRUE))
+       delta_auc_binary = unlist(delta_bin_out, use.names = TRUE),
+       dca_nb = unlist(nb_out, use.names = TRUE),
+       idinri = idinri_out)
 }
 
 #-----------------------------------------------------------------------
@@ -263,15 +371,21 @@ print(round(head(point_est$dca_nb, 20), 4))
 #-----------------------------------------------------------------------
 
 set.seed(SEED)
-# Each row of boot_cluster_idx is one resample: indices into clusters_all,
-# sampled with replacement, length = n_clusters.
-boot_cluster_idx <- replicate(N_REPS,
-                              sample.int(n_clusters, n_clusters, replace = TRUE),
-                              simplify = FALSE)
+# Stratified PSU bootstrap: within each design stratum, resample its PSU clusters
+# with replacement (the textbook NHANES scheme). Singleton strata are kept as-is
+# (no within-stratum variance to resample). Each element is one resample's vector
+# of cluster ids.
+resample_clusters <- function() {
+  unlist(lapply(strata_to_clusters, function(cl) {
+    if (length(cl) <= 1) cl else sample(cl, length(cl), replace = TRUE)
+  }), use.names = FALSE)
+}
+boot_cluster_lists <- replicate(N_REPS, resample_clusters(), simplify = FALSE)
 
-# Materialize row indices per rep up front.
-build_rows <- function(idx_vec) {
-  unlist(cluster_rows[clusters_all[idx_vec]], use.names = FALSE)
+# Materialize row indices for a resample's cluster ids (a cluster drawn k times
+# contributes its rows k times).
+build_rows <- function(cluster_vec) {
+  unlist(cluster_rows[cluster_vec], use.names = FALSE)
 }
 
 #-----------------------------------------------------------------------
@@ -280,7 +394,7 @@ build_rows <- function(idx_vec) {
 
 run_one <- function(i) {
   t0 <- Sys.time()
-  rows <- build_rows(boot_cluster_idx[[i]])
+  rows <- build_rows(boot_cluster_lists[[i]])
   res <- tryCatch(one_rep(i, rows), error = function(e) {
     message(sprintf("  rep %d failed: %s", i, e$message))
     NULL
@@ -303,14 +417,15 @@ if (HAS_FUTURE && N_WORKERS > 1) {
   reps_out <- future.apply::future_lapply(
     seq_len(N_REPS), run_one,
     future.seed = TRUE,
-    future.globals = c("df", "boot_cluster_idx", "clusters_all",
-                       "cluster_rows", "outcomes", "pairs",
+    future.globals = c("df", "boot_cluster_lists", "clusters_all",
+                       "cluster_rows", "strata_to_clusters", "outcomes", "pairs",
                        "build_rows", "one_rep",
-                       "timeroc_point_auc", "delong_delta",
+                       "timeroc_point_auc", "timeroc_delta", "delong_delta",
+                       "weighted_auc", "weighted_binary_auc",
                        "recalibrated_risk", "cr_net_benefit",
                        "cr_net_benefit_all", ".cif_at"),
     future.packages = c("timeROC", "survival", "riskRegression",
-                        "prodlim", "pROC")
+                        "prodlim", "pROC", "survIDINRI")
   )
   future::plan(future::sequential)
 } else {
@@ -337,8 +452,11 @@ message(sprintf("\nBootstrap wall time: %.1f s (%.2f min)",
 
 # Names from point estimate define the column order.
 auc_names <- names(point_est$auc)
+wauc_names <- names(point_est$wauc)
 delta_names <- names(point_est$delta_auc)
+delta_bin_names <- names(point_est$delta_auc_binary)
 nb_names <- names(point_est$dca_nb)
+idinri_names <- names(point_est$idinri)
 
 stack_field <- function(field, expected_names) {
   mat <- matrix(NA_real_, nrow = N_REPS, ncol = length(expected_names),
@@ -354,9 +472,12 @@ stack_field <- function(field, expected_names) {
   mat
 }
 
-auc_mat   <- stack_field("auc",       auc_names)
-delta_mat <- stack_field("delta_auc", delta_names)
-nb_mat    <- stack_field("dca_nb",    nb_names)
+auc_mat       <- stack_field("auc",              auc_names)
+wauc_mat      <- stack_field("wauc",             wauc_names)
+delta_mat     <- stack_field("delta_auc",        delta_names)
+delta_bin_mat <- stack_field("delta_auc_binary", delta_bin_names)
+nb_mat        <- stack_field("dca_nb",           nb_names)
+idinri_mat    <- stack_field("idinri",           idinri_names)
 
 #-----------------------------------------------------------------------
 # Save full distributions
@@ -365,12 +486,18 @@ nb_mat    <- stack_field("dca_nb",    nb_names)
 dir.create("results", showWarnings = FALSE)
 
 auc_dist <- as.list(as.data.frame(auc_mat))
+wauc_dist <- as.list(as.data.frame(wauc_mat))
 delta_dist <- as.list(as.data.frame(delta_mat))
+delta_bin_dist <- as.list(as.data.frame(delta_bin_mat))
 nb_dist <- as.list(as.data.frame(nb_mat))
+idinri_dist <- as.list(as.data.frame(idinri_mat))
 
-saveRDS(auc_dist,   "results/bootstrap_auc_distributions.rds")
-saveRDS(delta_dist, "results/bootstrap_deltaauc_distributions.rds")
-saveRDS(nb_dist,    "results/bootstrap_dca_netbenefit_distributions.rds")
+saveRDS(auc_dist,       "results/bootstrap_auc_distributions.rds")
+saveRDS(wauc_dist,      "results/bootstrap_wauc_distributions.rds")
+saveRDS(delta_dist,     "results/bootstrap_deltaauc_distributions.rds")
+saveRDS(delta_bin_dist, "results/bootstrap_deltaauc_binary_distributions.rds")
+saveRDS(nb_dist,        "results/bootstrap_dca_netbenefit_distributions.rds")
+saveRDS(idinri_dist,    "results/bootstrap_idinri_distributions.rds")
 
 #-----------------------------------------------------------------------
 # Build summary CSV
@@ -397,12 +524,17 @@ summarize_block <- function(mat, point_vec, kind, h3_keys = character(0)) {
 
 h3_key <- "rmrs_score_vs_findrisc_score__dm__t14.5"
 
-auc_summary   <- summarize_block(auc_mat,   point_est$auc,       "auc")
-delta_summary <- summarize_block(delta_mat, point_est$delta_auc, "delta_auc",
-                                 h3_keys = h3_key)
-nb_summary    <- summarize_block(nb_mat,    point_est$dca_nb,    "dca_nb")
+auc_summary       <- summarize_block(auc_mat,    point_est$auc,       "auc")
+wauc_summary      <- summarize_block(wauc_mat,   point_est$wauc,      "weighted_auc")
+delta_summary     <- summarize_block(delta_mat,  point_est$delta_auc, "delta_auc",
+                                     h3_keys = h3_key)
+delta_bin_summary <- summarize_block(delta_bin_mat, point_est$delta_auc_binary,
+                                     "delta_auc_binary")
+nb_summary        <- summarize_block(nb_mat,     point_est$dca_nb,    "dca_nb")
+idinri_summary    <- summarize_block(idinri_mat, point_est$idinri,    "idi_nri")
 
-summary_tbl <- rbind(auc_summary, delta_summary, nb_summary)
+summary_tbl <- rbind(auc_summary, wauc_summary, delta_summary, delta_bin_summary,
+                     nb_summary, idinri_summary)
 write.csv(summary_tbl, "results/bootstrap_summary.csv", row.names = FALSE)
 
 # Separate DCA CSV as a convenience for manuscript tables.
@@ -415,21 +547,31 @@ write.csv(nb_summary_clean, "results/bootstrap_dca_netbenefit.csv",
 # Report the H3 result explicitly
 #-----------------------------------------------------------------------
 
-h3_row <- summary_tbl[summary_tbl$quantity == h3_key, , drop = FALSE]
+# Primary inference is the IPCW timeROC delta (kind == "delta_auc"); the binary
+# DeLong delta (kind == "delta_auc_binary") is reported only as a secondary check.
+h3_row <- summary_tbl[summary_tbl$quantity == h3_key &
+                        summary_tbl$kind == "delta_auc", , drop = FALSE]
+h3_bin <- summary_tbl[summary_tbl$quantity == h3_key &
+                        summary_tbl$kind == "delta_auc_binary", , drop = FALSE]
 if (nrow(h3_row) == 1) {
   margin <- -0.05
   crosses <- h3_row$pct_2_5 < margin
   message(sprintf(
-    "\n=== H3 bootstrap CI (RMRS vs FINDRISC, diabetes mortality, t=14.5) ===\n  point     = %+0.4f\n  2.5%%      = %+0.4f\n  median    = %+0.4f\n  97.5%%     = %+0.4f\n  registered non-inferiority margin: delta-AUC > %+0.2f\n  95%% CI lower bound %s the margin (%s)",
+    "\n=== H3 bootstrap CI (RMRS vs FINDRISC, diabetes mortality, t=14.5) ===\n  PRIMARY (IPCW timeROC delta-AUC):\n    point  = %+0.4f\n    2.5%%   = %+0.4f\n    median = %+0.4f\n    97.5%%  = %+0.4f\n  registered non-inferiority margin: delta-AUC > %+0.2f\n  95%% CI lower bound %s the margin (%s)",
     h3_row$point, h3_row$pct_2_5, h3_row$pct_50, h3_row$pct_97_5,
     margin,
     ifelse(crosses, "CROSSES", "remains above"),
     ifelse(crosses, "non-inferiority NOT established",
                     "non-inferiority established")
   ))
+  if (nrow(h3_bin) == 1) {
+    message(sprintf(
+      "  SECONDARY (binary DeLong delta-AUC, for comparison only):\n    point = %+0.4f  95%% CI (%+0.4f, %+0.4f)",
+      h3_bin$point, h3_bin$pct_2_5, h3_bin$pct_97_5))
+  }
 }
 
-message(sprintf("\nResults written:\n  results/bootstrap_summary.csv (%d rows)\n  results/bootstrap_auc_distributions.rds\n  results/bootstrap_deltaauc_distributions.rds\n  results/bootstrap_dca_netbenefit_distributions.rds\n  results/bootstrap_dca_netbenefit.csv",
+message(sprintf("\nResults written:\n  results/bootstrap_summary.csv (%d rows)\n  results/bootstrap_auc_distributions.rds\n  results/bootstrap_deltaauc_distributions.rds\n  results/bootstrap_deltaauc_binary_distributions.rds\n  results/bootstrap_dca_netbenefit_distributions.rds\n  results/bootstrap_dca_netbenefit.csv",
                 nrow(summary_tbl)))
 
 message("\nDone.")

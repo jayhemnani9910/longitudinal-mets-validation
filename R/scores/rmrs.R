@@ -48,7 +48,9 @@ scale_factor <- function(x, factor) {
     sbp <- x[1]; dbp <- x[2]
     d_sbp <- thresholds$bp_sbp
     d_dbp <- thresholds$bp_dbp
-    # Per B8 eq 1: scale by the difference d_bp = d_sbp - d_dbp = 45 (not by 0.1*d).
+    # Per B8 eq 1, the BP unit is 0.1 * d_bp with d_bp = |d_sbp - d_dbp| = 45.
+    # The paper writes d_bp = d_dbp - d_sbp = -45 (a sign typo); the magnitude 45
+    # is intended, so the subtraction order is reversed here to keep it positive.
     # The systolic and diastolic excesses are compared and the larger taken.
     d_bp <- d_sbp - d_dbp  # 45
     z <- max(sbp - d_sbp, dbp - d_dbp) / (0.1 * d_bp)

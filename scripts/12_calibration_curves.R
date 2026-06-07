@@ -11,7 +11,7 @@
 # Inputs:  data/processed/cohort_with_scores.rds, R/utils/dca_competing.R
 # Outputs: results/plots/calibration_<outcome>.png, results/calibration_curve_points.csv
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(survival)

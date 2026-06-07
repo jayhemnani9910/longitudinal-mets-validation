@@ -1,5 +1,7 @@
-# ACC/AHA Pooled Cohort Equations (PCE) per Goff et al. 2014 (Circulation),
-# 2018 update (Yadlowsky et al. Ann Intern Med).
+# ACC/AHA Pooled Cohort Equations (PCE), implementing the original Goff et al.
+# 2014 (Circulation) coefficients (the race/sex-specific Table A equations).
+# The 2018 Yadlowsky et al. (Ann Intern Med) revision is a separate, differently
+# coefficiented model and is NOT implemented here.
 #
 # Implements 10-year ASCVD risk for four race/sex strata:
 #   - white female, black female, white male, black male

@@ -7,7 +7,7 @@
 #
 # Output: data/raw/lmf/lmf_combined.rds
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(readr)

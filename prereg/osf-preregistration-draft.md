@@ -1,8 +1,21 @@
-# OSF Pre-Registration: Longitudinal Validation of MetS Risk Scores
+# Study Protocol and Analysis Plan: Longitudinal Validation of MetS Risk Scores
 
-**Status:** Ready for OSF submission. This document serves as a transparent study protocol with the registered analysis plan and the primary results from Phase 2 and Phase 3 already computed. Pre-specified sensitivity analyses listed in section 8 remain to be run after submission.
-**Submitter:** Jay Hemnani (independent researcher; no current institutional affiliation listed)
-**Anticipated submission date:** 2026-05-18
+**Status:** Retrospective study protocol and analysis plan, published in the project repository alongside the code and results. This is a transparent written protocol rather than a timestamped prospective registration: it documents the analysis plan, hypotheses, and margins together with the primary results from Phase 2 and Phase 3, which were already computed. It is not a prospective OSF registration.
+**Author:** Jay Hemnani (independent researcher; no current institutional affiliation listed)
+**Protocol date:** 2026-05-18 (finalized alongside the analysis; see section 0 for corrections)
+
+---
+
+## 0. Post-draft corrections and final analysis (authoritative)
+
+This protocol was drafted with an early set of computed results in sections 3 and 8. The analysis was then corrected on several points; the final numbers are in the manuscript (`manuscript/main.pdf`) and the result CSVs under `results/`, which are authoritative and supersede the original-draft values retained below for transparency. The corrections were:
+
+1. **Reproducible data download.** The download script did not retrieve the 1999 to 2004 fasting-lab tables, which NHANES publishes under legacy names, so a fresh run silently dropped those cycles. This is fixed and verified: a clean checkout now rebuilds the exact N = 17,031 cohort.
+2. **Cause-coded subcohort for cause-specific outcomes.** Cardiovascular and diabetes-related analyses use the 1999 to 2014 cause-coded subcohort (N = 13,836; FINDRISC diabetes N = 13,806), not the full N = 17,031 shown in the section 8 tables, because the 2015 to 2018 public-use mortality files collapse cause of death to three categories (verified directly in the linked data).
+3. **Full decision-tree reconstruction.** The B9 tree is reconstructed in full (22 leaves) from the paper's Supporting Information S1 Table and applied with its native Korean feature scaling, replacing an earlier three-value reconstruction. B9 discrimination rose (diabetes-related AUC 0.582 to 0.692), and the RMRS-over-B9 deltas fell to +0.017 (all-cause), +0.032 (cardiovascular), and +0.081 (diabetes-related). H5 is restated: RMRS modestly but consistently exceeds B9 rather than dominating it.
+4. **Within-stratum bootstrap (primary inference) and correct H3 metric.** The PSU-cluster bootstrap now resamples primary sampling units within each design stratum, the standard NHANES scheme, rather than from the pooled cluster set, which over-dispersed by ignoring the strata. The primary H3 metric is the paired IPCW time-dependent delta-AUC (matching the primary discrimination metric used throughout), not the binary-outcome DeLong delta. Under this bootstrap the primary H3 delta-AUC is -0.020, 95% CI (-0.068, +0.028), whose lower bound falls below the -0.05 margin, so non-inferiority is NOT established on the primary metric. A secondary binary-outcome DeLong delta was +0.013 (-0.043, +0.063) and would have cleared the margin, but it uses a different outcome encoding, ignores the survey design, and is not the basis for the conclusion. FINDRISC remains numerically higher than RMRS on the primary AUC (0.770 vs 0.752); the two scores are best read as statistically indistinguishable rather than one being non-inferior to the other.
+5. **Clustered reclassification CIs.** The H4 IDI and NRI intervals come from the within-stratum cluster bootstrap (survey-valid) rather than the estimator's internal i.i.d. perturbation; both still exclude zero (IDI 0.004 [0.001, 0.009]; continuous NRI 0.139 [0.047, 0.267]).
+6. **Survey-weighted AUC sensitivity** was added; the design effect on discrimination is small (within about 0.04 AUC).
 
 ---
 
@@ -14,7 +27,7 @@ Longitudinal validation of metabolic syndrome risk scores (RMRS and B9 decision 
 
 This study externally validates two metabolic syndrome (MetS) risk scoring methods, the Robust MetS Risk Score (RMRS, Shin et al. PeerJ Computer Science 2024) and the B9 decision tree (Shin et al. PLoS One 2023), against the ACC/AHA Pooled Cohort Equations (PCE), Framingham 2008, and FINDRISC, on NHANES 1999-2018 with Linked Mortality File 2019-release follow-up. Three hard outcomes are evaluated: cardiovascular mortality, diabetes-related mortality (broadened definition, see section 6), and all-cause mortality. The analytic cohort is 17,031 adults aged 20-79 with complete fasting biomarkers and mortality linkage eligibility.
 
-The main finding is that the value of MetS-derived scores is outcome-specific. Three results paragraphs follow.
+The main finding is that the value of MetS-derived scores is outcome-specific. Three results paragraphs follow. The specific numbers in those paragraphs are original-draft values, superseded by the corrected final results in section 0 and the manuscript; in particular, RMRS and FINDRISC are statistically indistinguishable on diabetes-related mortality with non-inferiority not established at the -0.05 margin on the primary IPCW metric, and the full 22-leaf B9 reconstruction is competitive with rather than dominated by RMRS.
 
 **Cardiovascular and all-cause mortality.** The two MetS-derived scores do not match the clinical risk equations on discrimination. For CV mortality at the 9.5-year horizon, Framingham 2008 reaches IPCW time-dependent AUC 0.859 and PCE reaches 0.811, against RMRS at 0.662 and B9 at 0.565. The DeLong tests against horizon-cap binary outcomes give RMRS vs Framingham delta-AUC -0.190 (95% CI -0.231 to -0.148, p = 4.2e-19) and RMRS vs PCE delta-AUC -0.200 (95% CI -0.251 to -0.149, p = 2.4e-14). For all-cause mortality at 9.5 years, Framingham 2008 reaches AUC 0.810 and PCE reaches 0.758, against RMRS at 0.595 and B9 at 0.525. Decision Curve Analysis (DCA) over thresholds 0.05 to 0.30 for CV mortality shows PCE and Framingham generating positive net benefit across the clinically relevant range, with RMRS and B9 collapsing to zero net benefit at thresholds above approximately 0.05. The XGBoost ML upper-bound on the same MetS feature set reaches AUC 0.813 for CV mortality and 0.813 for all-cause mortality at 9.5 years, which does not exceed Framingham. For these two outcomes the clinical risk equations remain the right tool.
 
@@ -24,27 +37,27 @@ The main finding is that the value of MetS-derived scores is outcome-specific. T
 
 **Future work.** The XGBoost upper bound on diabetes-related mortality is 0.799 at 14.5 years (5-fold CV mean, SD 0.053). This leaves roughly 5 AUC points of headroom over both RMRS and FINDRISC, motivating future work on a refined tree-based or boosted MetS scoring variant for diabetes-mortality prediction.
 
-The two source papers reported cross-sectional discrimination of the MetS diagnosis label only. This pre-registration commits to testing longitudinal predictive validity using survey-weighted Fine-Gray competing-risks models and Cox proportional hazards, in line with TRIPOD+AI (Collins et al. BMJ 2024) and STROBE reporting standards.
+The two source papers reported cross-sectional discrimination of the MetS diagnosis label only. This protocol tests longitudinal predictive validity using survey-weighted Fine-Gray competing-risks models and Cox proportional hazards, in line with TRIPOD+AI (Collins et al. BMJ 2024) and STROBE reporting standards.
 
 **Positioning vs prior work.** Park et al. 2025 (JMIR 27:e67525) recently developed and validated a different noninvasive MetS predictive model with CVD risk assessments on multicohort data. This project differs in that it externally validates the Shin/Shim/Oh-specific scores (RMRS and the B9 decision tree) on NHANES + Linked Mortality File, rather than developing a new model. No prior work tests these specific scores against PCE, Framingham, or FINDRISC on US longitudinal mortality outcomes to our knowledge. See `prereg/literature-scan.md` for full context.
 
 ## 3. Hypotheses
 
-The hypothesis structure below reflects the locked narrative. Primary tests use Bonferroni at α=0.01; secondary tests use Benjamini-Hochberg FDR at α=0.05.
+The hypothesis structure below reflects the locked narrative. The draft results stated per hypothesis are the original-draft values; the corrected final values are summarized in section 0 and reported in full in the manuscript. Primary inference in the final analysis is interval-based (bootstrap confidence intervals against the protocol non-inferiority margin and against zero), so the Bonferroni and Benjamini-Hochberg p-value adjustments named in the original plan are not applied to the primary conclusions, and the missing-data plan is complete-case rather than the multiple imputation named in the original section 7 (see section 0 and the reconciled section 7); any DeLong p-values shown are unadjusted secondary checks.
 
 ### Primary hypotheses
 
-- **H1** (RMRS vs Framingham 2008 on CV mortality): RMRS will not match Framingham 2008 on 9.5-year IPCW time-dependent AUC for CV mortality. Operationalized as a two-sided DeLong test of delta-AUC; primary direction is RMRS below Framingham by a clinically meaningful margin. Registered result: delta-AUC = -0.190, 95% CI (-0.231, -0.148), p = 4.2e-19.
-- **H2** (RMRS vs PCE on CV mortality): RMRS will not match PCE on 9.5-year IPCW time-dependent AUC for CV mortality. Operationalized as a two-sided DeLong test. Registered result: delta-AUC = -0.200, 95% CI (-0.251, -0.149), p = 2.4e-14.
-- **H3** (RMRS matches FINDRISC on diabetes-related mortality): RMRS will match FINDRISC on 14.5-year IPCW time-dependent AUC for diabetes-related mortality (broadened definition; see section 6, Outcomes). Operationalized as a two-sided DeLong test with statistical non-inferiority defined as the 95% CI lower bound of the delta-AUC remaining above -0.05. Registered result: delta-AUC = +0.011, 95% CI (-0.055, +0.077), p = 0.75. The point estimate sits well inside the registered margin and favors RMRS, but the 95% CI lower bound at -0.055 marginally exceeds the -0.05 threshold. The test does not reject non-inferiority at the registered margin. The bootstrap CIs at 500 PSU-cluster resamples (planned sensitivity analysis; see section 8) will provide the definitive interval estimate for this comparison.
-- **H4** (RMRS adds incremental value to FINDRISC on diabetes-related mortality): RMRS added on top of FINDRISC will improve reclassification on diabetes-related mortality at 14.5 years. Operationalized as continuous NRI and IDI (`survIDINRI::IDI.INF`), with primary success defined as both 95% CIs excluding zero. Registered result: NRI = 0.173, 95% CI (0.033, 0.287); IDI = 0.0031, 95% CI (0.0002, 0.0099). Both metrics meet the primary success criterion.
-- **H5** (RMRS dominates B9 on all three outcomes): RMRS will outperform the B9 decision tree on AUC for all three outcomes. Operationalized as DeLong tests on the horizon-cap binary outcome. Registered results: delta-AUC = +0.066 (p = 3.6e-9) for all-cause at 9.5y; +0.086 (p = 3.2e-4) for CV at 9.5y; +0.149 (p = 3.2e-5) for diabetes-related at 14.5y.
+- **H1** (RMRS vs Framingham 2008 on CV mortality): RMRS will not match Framingham 2008 on 9.5-year IPCW time-dependent AUC for CV mortality. Operationalized as a two-sided DeLong test of delta-AUC; primary direction is RMRS below Framingham by a clinically meaningful margin. Draft result: delta-AUC = -0.190, 95% CI (-0.231, -0.148), p = 4.2e-19.
+- **H2** (RMRS vs PCE on CV mortality): RMRS will not match PCE on 9.5-year IPCW time-dependent AUC for CV mortality. Operationalized as a two-sided DeLong test. Draft result: delta-AUC = -0.200, 95% CI (-0.251, -0.149), p = 2.4e-14.
+- **H3** (RMRS matches FINDRISC on diabetes-related mortality): RMRS will match FINDRISC on 14.5-year IPCW time-dependent AUC for diabetes-related mortality (broadened definition; see section 6, Outcomes). Operationalized as a two-sided DeLong test with statistical non-inferiority defined as the 95% CI lower bound of the delta-AUC remaining above -0.05. Draft result: delta-AUC = +0.011, 95% CI (-0.055, +0.077), p = 0.75. The definitive interval is the within-stratum PSU-cluster bootstrap reported in section 0 and the Bootstrap sensitivity results section; on the primary IPCW time-dependent delta-AUC it is -0.020 (95% CI -0.068, +0.028), whose lower bound falls below the -0.05 margin, so non-inferiority is not established on the primary metric.
+- **H4** (RMRS adds incremental value to FINDRISC on diabetes-related mortality): RMRS added on top of FINDRISC will improve reclassification on diabetes-related mortality at 14.5 years. Operationalized as continuous NRI and IDI (`survIDINRI::IDI.INF`), with primary success defined as both 95% CIs excluding zero. Draft result: NRI = 0.173, 95% CI (0.033, 0.287); IDI = 0.0031, 95% CI (0.0002, 0.0099). Both metrics meet the primary success criterion.
+- **H5** (RMRS dominates B9 on all three outcomes): RMRS will outperform the B9 decision tree on AUC for all three outcomes. Operationalized as DeLong tests on the horizon-cap binary outcome. Draft results: delta-AUC = +0.066 (p = 3.6e-9) for all-cause at 9.5y; +0.086 (p = 3.2e-4) for CV at 9.5y; +0.149 (p = 3.2e-5) for diabetes-related at 14.5y.
 
 ### Secondary hypotheses (Benjamini-Hochberg FDR at α=0.05)
 
 - B9 vs Framingham on CV mortality, B9 vs PCE on CV mortality (expected: B9 strongly dominated).
-- B9 vs FINDRISC on diabetes-related mortality (expected: B9 strongly dominated; registered delta-AUC -0.137, p = 1.1e-5).
-- PCE vs Framingham on CV mortality (expected: indistinguishable; registered delta-AUC +0.009, p = 0.27).
+- B9 vs FINDRISC on diabetes-related mortality (expected: B9 strongly dominated; draft delta-AUC -0.137, p = 1.1e-5).
+- PCE vs Framingham on CV mortality (expected: indistinguishable; draft delta-AUC +0.009, p = 0.27).
 - FINDRISC, PCE, Framingham AUCs on all-cause mortality.
 - FINDRISC AUC on CV mortality.
 
@@ -53,7 +66,7 @@ The hypothesis structure below reflects the locked narrative. Primary tests use 
 - Subgroup analyses by sex, race/ethnicity, age band, for all primary outcomes.
 - Sensitivity analyses without follow-up cap, complete-cases-only, single-cycle stratification.
 - US-refit B9 left-subtree comparison for transportability (Task 5.2b in the project spec).
-- XGBoost ML upper-bound baseline on the MetS feature set (bounds achievable discrimination from MetS factors alone). Registered ML upper-bound at 14.5y for diabetes-related mortality is AUC 0.799 (5-fold CV mean, SD 0.053).
+- XGBoost ML upper-bound baseline on the MetS feature set (bounds achievable discrimination from MetS factors alone). Draft ML upper-bound at 14.5y for diabetes-related mortality is AUC 0.799 (5-fold CV mean, SD 0.053).
 
 ## 4. Design plan
 
@@ -77,7 +90,7 @@ The hypothesis structure below reflects the locked narrative. Primary tests use 
 - No prior type-2 diabetes at baseline (DIQ010).
 
 ### Actual analytic sample size
-**N = 17,031 adults** after all inclusion criteria. The PCE-restricted subsample (where PCE inputs are fully observed, excluding Mexican American and Other Hispanic per Goff et al. 2014) is N = 9,815. The FINDRISC subsample (with non-missing FINDRISC proxy inputs) is N = 16,996.
+**N = 17,031 adults** after all inclusion criteria. The PCE-applicable subsample (age 40-79 with PCE inputs observed) is N = 9,815; Mexican American and Other Hispanic participants are mapped to the white PCE equation rather than excluded, since the published equations provide coefficients only for white and Black. The FINDRISC subsample (with non-missing FINDRISC inputs) is N = 16,996 for all-cause and N = 13,806 within the 1999-2014 cause-coded subcohort used for the diabetes-related outcome.
 
 ## 6. Variables
 
@@ -118,16 +131,16 @@ The hypothesis structure below reflects the locked narrative. Primary tests use 
   - All-cause and CV outcomes: 5 years and a 10-year horizon operationalized as t = 9.5 years.
   - Diabetes outcome (15-year follow-up): 5 years, 10 years, and a 15-year horizon operationalized as t = 14.5 years.
   - The horizons at t = 9.5 and t = 14.5 substitute for the nominal 10-year and 15-year endpoints to avoid IPCW weight degeneracy at the exact follow-up cap, where the censoring distribution has no mass to the right of the evaluation time and weights blow up to NA. Shifting the evaluation point inward by 0.5 years preserves the 10-year and 15-year framing while keeping the IPCW estimator well-defined.
-- `iid = FALSE` for the AUC estimator at N approximately 17k due to memory constraints. Bootstrap CIs computed separately (see section 8, pending sensitivity analyses).
+- `iid = FALSE` for the AUC estimator at N approximately 17k due to memory constraints. Bootstrap CIs computed separately (see the Bootstrap sensitivity results section).
 - Pairwise DeLong tests via `pROC::roc.test` on the horizon-cap binary outcome (subjects observed past the horizon are coded as failures if the event occurred by then, non-failures otherwise; censored-before-horizon subjects are excluded). This is the operational substitute for `timeROC::compare` because `timeROC` with `iid = TRUE` runs out of memory at N = 17,031. Effective sample sizes after horizon-cap restriction range from n_eval = 5,688 (diabetes 14.5y, FINDRISC subsample) to n_eval = 9,981 (CV and all-cause 9.5y, full cohort).
 
-### Calibration
-- Calibration-in-the-large, calibration slope, calibration plot at the primary horizon for each outcome.
-- IPCW-corrected Brier score via `riskRegression::Score`.
-- Spiegelhalter z-test for significance.
+### Calibration (as run)
+- Calibration plots at the primary horizon for each outcome, on each score's recalibrated horizon-specific absolute risk (Fine-Gray CIF for the competing-risks outcomes, Cox complement for all-cause), with observed incidence by Aalen-Johansen or one minus Kaplan-Meier.
+- IPCW Brier and integrated Brier scores via `riskRegression::Score`, computed on the recalibrated absolute-risk scale (raw scores such as FINDRISC are not probabilities, so Brier on the raw score is not meaningful and is not reported).
+- The original draft also named calibration-in-the-large, a calibration slope, and a Spiegelhalter z-test; these summary statistics were not separately reported (deviation from the original plan).
 
-### Decision analysis
-- Decision Curve Analysis (DCA) at the primary horizon for each outcome over threshold range 0.01 to 0.30, using `dcurves::dca`. For diabetes-related mortality the clinically relevant range is 0.01 to 0.03 given the low event rate; for CV mortality 0.05 to 0.20; for all-cause 0.05 to 0.30.
+### Decision analysis (as run)
+- Decision Curve Analysis (DCA) at the primary horizon for each outcome, computed directly from the per-score recalibrated risk and the Aalen-Johansen cause-specific incidence within the treat-positive group (`R/utils/dca_competing.R`), rather than via `dcurves::dca`, so that censoring and competing deaths are handled. Single-threshold bootstrap summaries are placed on each outcome's achievable predicted-risk range (5% all-cause, 2% CV, 1% diabetes-related). The recalibration is fit and evaluated on the same cohort, so DCA is apparent in-sample and unweighted (exploratory).
 - Compared against "treat all" and "treat none" reference strategies.
 
 ### Reclassification metrics
@@ -137,15 +150,13 @@ The hypothesis structure below reflects the locked narrative. Primary tests use 
 - Primary: cap follow-up at 10 years for CV and all-cause, 15 years for diabetes-related, for consistent prediction-window framing.
 - Sensitivity: rerun without cap.
 
-### Missing data
-- Multiple imputation by chained equations (`mice` package), 20 imputations.
-- Pooling via Rubin's rules.
-- Imputation accounts for survey weights.
-- Sensitivity: complete-cases analysis.
+### Missing data (as run: complete-case)
+- The final analysis is **complete-case** on the MetS components that define eligibility; scores requiring additional inputs are evaluated on their non-missing subset, with the per-score analytic N reported alongside each result.
+- The original draft named multiple imputation by chained equations (`mice`, 20 imputations) with Rubin's-rules pooling. This was **not** used: the cohort is complete on the eligibility-defining components by construction, so multiple imputation was not run. This is a deviation from the original plan (see section 0).
 
-### Multiplicity correction
-- Primary tests (5): Bonferroni at α=0.01 (family-wise α=0.05).
-- Secondary tests (set of 10 in section 3): Benjamini-Hochberg FDR at α=0.05.
+### Multiplicity correction (as run: interval-based)
+- The final primary inference is interval-based: bootstrap confidence intervals against the protocol non-inferiority margin and against zero. No p-value multiplicity adjustment is applied to the primary conclusions.
+- The original draft named Bonferroni at α=0.01 for the five primary tests and Benjamini-Hochberg FDR at α=0.05 for the secondary set. Because the final inference is interval-based rather than p-value-based, these adjustments are not applied (deviation from the original plan); any DeLong p-values shown are unadjusted secondary checks.
 - Exploratory tests: descriptive only, no correction.
 
 ### Reporting standards
@@ -154,7 +165,9 @@ The hypothesis structure below reflects the locked narrative. Primary tests use 
 
 ## 8. Pre-specified primary results
 
-The primary AUC tables below are computed from the locked Phase 2 + Phase 3 results in the repository (`results/allcause_summary.csv`, `results/cv_summary.csv`, `results/dm_summary.csv`, `results/pairwise_comparisons.csv`, `results/incremental_dm.csv`, `results/xgboost_summary.csv`). All AUCs are IPCW time-dependent estimates from `timeROC::timeROC` with `iid = FALSE` unless otherwise noted.
+**These tables are original-draft values (full cohort N for every outcome, pre-correction B9), retained for transparency. They are superseded by the corrected final results summarized in section 0 and reported in full in the manuscript, which restrict the cardiovascular and diabetes-related analyses to the cause-coded subcohort (N = 13,836; FINDRISC diabetes N = 13,806) and use the full 22-leaf B9 reconstruction. The B9 rows below are the largest changes: final B9 AUC is 0.585 (all-cause, 9.5y), 0.631 (cardiovascular, 9.5y), and 0.692 (diabetes-related, 14.5y).**
+
+The primary AUC tables below are computed from the Phase 2 + Phase 3 results in the repository (`results/allcause_summary.csv`, `results/cv_summary.csv`, `results/dm_summary.csv`, `results/pairwise_comparisons.csv`, `results/incremental_dm.csv`, `results/xgboost_summary.csv`). All AUCs are IPCW time-dependent estimates from `timeROC::timeROC` with `iid = FALSE` unless otherwise noted.
 
 ### 8.1 All-cause mortality (Cox, 10-year follow-up; AUC evaluated at t = 9.5)
 
@@ -219,28 +232,28 @@ DCA at thresholds 0.01 to 0.03 ranks FINDRISC first and RMRS second, both above 
 
 The XGBoost ML upper bound for diabetes-related mortality at 14.5 years is 0.799 (5-fold CV mean, SD 0.053), leaving roughly 5 AUC points of headroom over RMRS and FINDRISC.
 
-## 9. Pre-specified sensitivity analyses (pending after OSF submission)
+## 9. Pre-specified sensitivity analyses (completed)
 
-These analyses are part of the registered plan and will be run after this OSF submission. None will alter the primary results above; they are reported in the submitted manuscript alongside the primary tables.
+These analyses were part of the plan and have been run; they do not alter the primary conclusions and are reported in the manuscript alongside the primary tables.
 
-1. **Bootstrap 95% CIs at 500 reps** for primary AUC and DCA net benefit estimates, using a PSU-cluster bootstrap that respects NHANES survey design (SDMVPSU within SDMVSTRA). Replaces the analytic CIs reported in section 8.
-2. **B9 left-subtree US-refit sensitivity** (Task 5.2b in the project spec). The left-subtree of the B9 decision tree was approximated from the published figure rather than refit on NHANES; this sensitivity refits the left subtree on a held-out NHANES split to assess transportability.
-3. **FINDRISC proxy refinement.** The current FINDRISC implementation uses NHANES PAQ, DR1TOT, and MCQ300C proxies for physical activity, vegetable intake, and family history of diabetes. A refined mapping per the original FINDRISC questionnaire will be evaluated as a sensitivity analysis.
-4. **Subgroup analyses** by sex, race/ethnicity (NH White, NH Black, NH Asian, Mexican American, Other Hispanic, Other), and age band (20-39, 40-59, 60-79), for all three outcomes.
+1. **Bootstrap 95% CIs at 500 reps** for primary AUC, delta-AUC, and DCA net benefit, using a within-stratum PSU-cluster bootstrap that respects NHANES survey design (SDMVPSU within SDMVSTRA). These are the definitive intervals (see the Bootstrap sensitivity results section below) and supersede the analytic CIs in section 8.
+2. **B9 US-refit sensitivity** (`scripts/15_b9_refit.R`). A CART was refit on a single held-out 30% NHANES split using the three BPWC features to predict ATP III metabolic syndrome, as an exploratory check of whether the transported tree's gap reflects Korean calibration rather than the tree method. This is an internal US comparison on one split, not an external mortality validation.
+3. **FINDRISC proxy refinement (done).** The FINDRISC implementation uses NHANES-derived family history (MCQ300C), prediabetes / impaired-fasting-glucose (DIQ160 or measured IFG), and physical activity (PAQ) rather than constant placeholders. The daily fruit-and-vegetable item has no cycle-consistent NHANES counterpart and is held at the no-credit level (a documented residual gap); no DR1TOT dietary-recall proxy is used.
+4. **Subgroup analyses (done)** by sex, race/ethnicity, and age band, for all three outcomes (`scripts/13_subgroups.R`); the diabetes-related H3 contrast is in the manuscript and the full grid is in `results/subgroup_auc.csv`.
 
 ## 10. Deviations from the original analysis plan
 
-Documented for OSF transparency. The deviations below are operational corrections informed by a dry run of the pipeline on the assembled cohort, before the primary hypothesis tests in section 8 were executed.
+Documented for transparency. The deviations below are operational corrections informed by a dry run of the pipeline on the assembled cohort, before the primary hypothesis tests in section 8 were executed.
 
 - **2026-05-18: Diabetes-mortality outcome broadened.** First pipeline run at N = 17,031 produced only 6 events under the narrow UCOD_LEADING == 7 with 10-year cap definition. The diabetes outcome is now defined as UCOD_LEADING in {7, 9} OR DIABETES contributing-cause flag = 1, with a 15-year follow-up cap. Event count under the broadened definition is 75. All-cause and CV outcomes remain at 10 years. See section 6 for full rationale.
 - **2026-05-18: AUC horizons shifted off the follow-up cap.** The 10-year and 15-year time-dependent AUCs were degenerate at the exact cap (IPCW weights blow up to NA) on the dry run. Horizons are operationalized as t = 9.5 (CV, all-cause) and t = 14.5 (diabetes). 5-year horizons are unchanged.
 - **2026-05-18: DeLong pairwise inference switched to horizon-cap binary outcome.** `timeROC::compare` requires `iid = TRUE`, which runs out of memory at N = 17,031. Pairwise DeLong tests are computed on the horizon-cap binary outcome via `pROC::roc.test`, with effective sample sizes after horizon-cap restriction ranging from n_eval = 5,688 to n_eval = 9,981 (see section 7, Discrimination). This is a documented operational compromise; bootstrap CIs in section 9 will provide the survey-design-respecting inference.
 
-Any further deviation from this pre-registration will be documented in `prereg/deviations-log.md` in the project GitHub repository, with timestamp, reason, and impact assessment. Pre-registered analyses will be reported as planned even if deviations are also reported.
+Any further deviation from this protocol is documented in the project GitHub repository, with reason and impact assessment. Planned analyses are reported as specified even where deviations are also reported.
 
 ## Bootstrap sensitivity results
 
-The 500-rep PSU-cluster bootstrap registered in section 9 has been run (seed 20260519, `scripts/14_bootstrap_cis.R`). For the H3 contrast (RMRS vs FINDRISC on diabetes-related mortality at t = 14.5), the bootstrap percentile interval is delta-AUC = +0.011 (95% CI -0.053 to +0.075). The lower bound is 0.003 AUC units below the registered -0.05 non-inferiority margin, so the bootstrap does not establish non-inferiority at the pre-specified margin, in agreement with the DeLong-based CI reported in section 8.3. Bootstrap percentile intervals for the other primary delta-AUCs are RMRS vs B9 on all-cause mortality at t = 9.5: +0.066 (0.044, 0.089); RMRS vs B9 on CV mortality at t = 9.5: +0.086 (0.044, 0.129); RMRS vs B9 on diabetes mortality at t = 14.5: +0.149 (0.079, 0.215); PCE vs Framingham on CV mortality at t = 9.5: +0.009 (-0.008, +0.026). Full distributions are stored at `results/bootstrap_*.rds` and `results/bootstrap_summary.csv`.
+The 500-rep within-stratum PSU-cluster bootstrap (seed 20260519, `scripts/14_bootstrap_cis.R`, resampling primary sampling units within each `sdmvstra`) is the protocol's definitive inference; it supersedes the pooled-cluster bootstrap of the original draft (see section 0, correction 4). The primary delta-AUC for each contrast is the paired IPCW time-dependent delta-AUC. For the H3 contrast (RMRS vs FINDRISC on diabetes-related mortality at t = 14.5), the bootstrap percentile interval is delta-AUC = -0.020 (95% CI -0.068 to +0.028). The lower bound is below the protocol -0.05 non-inferiority margin, so non-inferiority is NOT established on the primary metric; FINDRISC is numerically higher than RMRS on the primary AUC (0.770 vs 0.752), and the two are best read as statistically indistinguishable. A secondary binary-outcome DeLong delta was +0.013 (-0.043, +0.063), reported for comparison only. Other primary (IPCW) delta-AUCs: RMRS vs B9 on all-cause mortality at t = 9.5: +0.014 (0.000, 0.029); RMRS vs B9 on CV mortality at t = 9.5: +0.029 (-0.003, 0.064); RMRS vs B9 on diabetes mortality at t = 14.5: +0.060 (0.015, 0.110); PCE vs Framingham on CV mortality at t = 9.5: +0.009 (-0.001, +0.021). The H4 reclassification metrics from the same bootstrap are IDI = 0.004 (0.001, 0.009) and continuous NRI = 0.139 (0.047, 0.267), both excluding zero. Full distributions are stored at `results/bootstrap_*.rds` and `results/bootstrap_summary.csv`.
 
 ## 11. Other
 
@@ -248,7 +261,7 @@ The 500-rep PSU-cluster bootstrap registered in section 9 has been run (seed 202
 All primary analyses in R 4.3.3 with `renv` lockfile pinning packages (rms pinned to 6.7-1 for R 4.3 compatibility). ML sensitivity analysis in Python 3.11 with `uv` lockfile. Repository: https://github.com/jayhemnani9910/longitudinal-mets-validation.
 
 ### Code availability
-Repository public from project initialization. Final code release at submission time, with cleaned README and reproducibility instructions.
+Repository public from project initialization, with README and reproducibility instructions.
 
 ### Ethics
 NHANES public-use files and the public-use NHANES Linked Mortality File are de-identified and exempt from additional IRB review. The manuscript will include this statement.
@@ -258,13 +271,6 @@ Jay Hemnani (independent researcher; no current institutional affiliation listed
 
 ---
 
-## Submission note
+## Document note
 
-This OSF registration is being submitted after Phase 2 (primary survival analysis) and Phase 3 (DCA, pairwise comparisons, XGBoost ML upper bound) are complete, with the registered results reported in section 8. The document serves as a transparent study protocol that combines the registered analysis plan, the operational deviations triggered by a dry run on the cohort (section 10), the registered findings (section 8), and the pre-specified sensitivity analyses still to be run after submission (section 9). The intent is full transparency: every analysis decision is documented before the manuscript is drafted, and the bootstrap-CI sensitivity in section 9 will replace the analytic CIs in the primary tables when it is complete.
-
-When submitting to OSF:
-1. Create OSF project at osf.io/new.
-2. Title: "Longitudinal validation of metabolic syndrome risk scores".
-3. Public visibility.
-4. Add this document as the registration content (use the "Open-Ended Registration" template; copy sections into matching OSF fields).
-5. After submission, capture the permanent OSF URL (osf.io/XXXXX) and update `README.md`.
+This is a retrospective study protocol, not a timestamped prospective registration. It was finalized after Phase 2 (primary survival analysis) and Phase 3 (DCA, pairwise comparisons, XGBoost ML upper bound) were complete, and it combines the analysis plan, the operational deviations triggered by a dry run on the cohort (section 10), the draft findings (section 8, superseded by section 0), and the sensitivity analyses (section 9). It is published in the project repository alongside the code and results for transparency; the corrected final numbers are authoritative in section 0, the Bootstrap sensitivity results section, and the manuscript.

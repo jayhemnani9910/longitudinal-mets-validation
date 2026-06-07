@@ -2191,6 +2191,42 @@
       "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
       "Repository": "CRAN"
     },
+    "haven": {
+      "Package": "haven",
+      "Version": "2.5.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Depends": [
+        "R (>= 3.6)"
+      ],
+      "Imports": [
+        "cli (>= 3.0.0)",
+        "forcats (>= 0.2.0)",
+        "hms",
+        "lifecycle",
+        "methods",
+        "readr (>= 0.1.0)",
+        "rlang (>= 0.4.0)",
+        "tibble",
+        "tidyselect",
+        "vctrs (>= 0.3.0)"
+      ],
+      "LinkingTo": [
+        "cpp11"
+      ],
+      "Suggests": [
+        "covr",
+        "crayon",
+        "fs",
+        "knitr",
+        "pillar (>= 1.4.0)",
+        "rmarkdown",
+        "testthat (>= 3.0.0)",
+        "utf8"
+      ],
+      "License": "MIT + file LICENSE",
+      "NeedsCompilation": "yes"
+    },
     "highr": {
       "Package": "highr",
       "Version": "0.12",
@@ -3003,6 +3039,36 @@
       "Author": "Alan Genz [aut], Frank Bretz [aut], Tetsuhisa Miwa [aut], Xuefei Mi [aut], Friedrich Leisch [ctb], Fabian Scheipl [ctb], Bjoern Bornkamp [ctb] (ORCID: <https://orcid.org/0000-0002-6294-8185>), Martin Maechler [ctb] (ORCID: <https://orcid.org/0000-0002-8685-9910>), Torsten Hothorn [aut, cre] (ORCID: <https://orcid.org/0000-0001-8301-0471>)",
       "Maintainer": "Torsten Hothorn <Torsten.Hothorn@R-project.org>",
       "Repository": "CRAN"
+    },
+    "nhanesA": {
+      "Package": "nhanesA",
+      "Version": "1.4.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Depends": [
+        "R (>= 4.1.0)",
+        "methods"
+      ],
+      "Imports": [
+        "stringr",
+        "foreign",
+        "rvest",
+        "xml2",
+        "dplyr",
+        "plyr"
+      ],
+      "Suggests": [
+        "knitr",
+        "DBI",
+        "odbc",
+        "RMariaDB",
+        "RPostgres",
+        "rmarkdown",
+        "survey",
+        "ggplot2"
+      ],
+      "License": "GPL (>= 2)",
+      "NeedsCompilation": "no"
     },
     "nlme": {
       "Package": "nlme",
@@ -4411,6 +4477,18 @@
       "Author": "Hadley Wickham [aut, cre, cph], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
+    },
+    "survIDINRI": {
+      "Package": "survIDINRI",
+      "Version": "1.1-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Depends": [
+        "survC1",
+        "survival"
+      ],
+      "License": "GPL-2",
+      "NeedsCompilation": "yes"
     },
     "survey": {
       "Package": "survey",

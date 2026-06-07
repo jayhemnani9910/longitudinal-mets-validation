@@ -1,0 +1,13 @@
+"outcome","score","horizon_y","brier"
+"allcause","rmrs_score",9.5,0.054281359000157
+"allcause","b9_score",9.5,0.0542455193154725
+"allcause","pce_score",9.5,0.0782987188589871
+"allcause","framingham_score",9.5,0.051004466305738
+"allcause","findrisc_score",9.5,0.0529670776137229
+"cv","rmrs_score",9.5,0.0128869371946282
+"cv","b9_score",9.5,0.0128900065668748
+"cv","pce_score",9.5,0.0202232230379398
+"cv","framingham_score",9.5,0.0127079851201725
+"dm","rmrs_score",14.5,0.00762621866990783
+"dm","b9_score",14.5,0.00765852699935094
+"dm","findrisc_score",14.5,0.00749241533286935

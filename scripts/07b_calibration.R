@@ -4,10 +4,19 @@
 # Calibration plots and Brier scores per (outcome, score). Uses
 # riskRegression::Score with IPCW correction.
 #
+# Brier is computed on each score's RECALIBRATED horizon-specific absolute risk
+# (Fine-Gray CIF for the competing-risks outcomes, Cox complement for all-cause),
+# the same mapping used by the decision curve analysis (R/utils/dca_competing.R).
+# Brier on the raw score is meaningless because several scores are not on a
+# probability scale (FINDRISC is an integer points count; RMRS sits in a narrow
+# band), which previously produced impossible Brier values. The recalibration is
+# fit and evaluated on the same cohort, so the Brier is apparent in-sample,
+# matching the calibration curves and the DCA.
+#
 # Inputs:  data/processed/cohort_with_scores.rds
-# Outputs: results/calibration/cal_<outcome>_<score>.png, results/calibration_summary.csv
+# Outputs: results/calibration/dist_<outcome>_<score>.png, results/calibration_summary.csv
 
-.libPaths("/home/po/projects/work/longitudinal-mets-validation/renv/library/R-4.3/x86_64-pc-linux-gnu")
+.libPaths("renv/library/R-4.3/x86_64-pc-linux-gnu")
 
 suppressMessages({
   library(survival)
@@ -16,6 +25,8 @@ suppressMessages({
   library(dplyr)
   library(ggplot2)
 })
+
+source("R/utils/dca_competing.R")   # recalibrated_risk()
 
 df <- readRDS("data/processed/cohort_with_scores.rds")
 
@@ -29,14 +40,20 @@ df_cause <- df[df$cause_coded, ]
 outcomes <- list(
   allcause = list(formula = Surv(followup_years, event_allcause) ~ 1,
                   data = df, time = 9.5,
+                  time_col = "followup_years", status_col = "event_allcause",
+                  cause = 1, competing = FALSE,
                   scores  = c("rmrs_score", "b9_score", "pce_score",
                               "framingham_score", "findrisc_score")),
   cv       = list(formula = Hist(followup_years, competing_cv) ~ 1,
                   cause = 1, data = df_cause, time = 9.5,
+                  time_col = "followup_years", status_col = "competing_cv",
+                  competing = TRUE,
                   scores = c("rmrs_score", "b9_score", "pce_score",
                              "framingham_score")),
   dm       = list(formula = Hist(followup_years_dm, competing_dm) ~ 1,
                   cause = 1, data = df_cause, time = 14.5,
+                  time_col = "followup_years_dm", status_col = "competing_dm",
+                  competing = TRUE,
                   scores = c("rmrs_score", "b9_score", "findrisc_score"))
 )
 
@@ -48,9 +65,21 @@ for (out_name in names(outcomes)) {
     df_s <- out$data[rows, ]
     if (nrow(df_s) < 100) next
 
+    # Map the raw score to a horizon-specific absolute risk before scoring.
+    risk <- recalibrated_risk(df_s, s, out$time_col, out$status_col,
+                              out$cause, out$time, out$competing)
+    keep <- !is.na(risk)
+    if (sum(keep) < 100) {
+      message(sprintf("  skipped %s x %s (recalibration produced no risk)",
+                      out_name, s))
+      next
+    }
+    df_k   <- df_s[keep, ]
+    risk_k <- risk[keep]
+
     args <- list(
-      object   = setNames(list(df_s[[s]]), s),
-      data     = df_s,
+      object   = setNames(list(risk_k), s),
+      data     = df_k,
       formula  = out$formula,
       times    = out$time,
       metrics  = c("brier", "auc"),
