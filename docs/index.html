@@ -39,24 +39,24 @@
   <p><strong>Cohort.</strong> Pooled NHANES 1999 to 2018 fasting subsample, adults 20 to 79 years, with non-missing values on the five metabolic syndrome components and eligible mortality linkage. N = 17,031 (all-cause); cardiovascular and diabetes-related analyses use the 13,836 participants from the 1999 to 2014 cycles with full leading-cause coding.</p>
   <p><strong>Outcomes.</strong> All-cause mortality (10-year cap, 806 deaths, full cohort), cardiovascular mortality (10-year cap, 173 deaths), and diabetes-related mortality under a broadened definition combining underlying-cause diabetes mellitus, underlying-cause nephritis, and the LMF DIABETES contributing-cause flag (15-year cap, 77 deaths). Cardiovascular and diabetes counts are within the cause-coded subcohort.</p>
   <p><strong>Scores compared.</strong> RMRS (continuous metabolic-syndrome risk score via triangular areal similarity); B9 (decision-tree formulation of the same five components); ACC/AHA Pooled Cohort Equations (primary cardiovascular baseline); Framingham 2008 (secondary cardiovascular baseline); FINDRISC (type 2 diabetes screening baseline).</p>
-  <p><strong>Methods.</strong> Survey-weighted Fine-Gray competing-risks (cardiovascular, diabetes) and Cox proportional hazards (all-cause). Time-dependent IPCW AUC at off-cap horizons. Competing-risks decision curve analysis with Fine-Gray cumulative-incidence recalibration and Aalen-Johansen net benefit. DeLong-based delta-AUC plus 500-rep PSU-cluster bootstrap CIs. Continuous NRI and IDI. XGBoost ML ceiling with PSU x stratum grouped cross-validation.</p>
+  <p><strong>Methods.</strong> Survey-weighted Fine-Gray competing-risks (cardiovascular, diabetes) and Cox proportional hazards (all-cause). Time-dependent IPCW AUC at off-cap horizons. Competing-risks decision curve analysis with Fine-Gray cumulative-incidence recalibration and Aalen-Johansen net benefit. Paired IPCW time-dependent delta-AUC (DeLong on the horizon-cap binary outcome as a secondary check) with 500-rep within-stratum PSU-cluster bootstrap CIs. Continuous NRI and IDI. XGBoost ML ceiling with PSU x stratum grouped cross-validation.</p>
 </section>
 
 <section id="diagrams">
   <h2>Diagrams</h2>
 
   <figure>
-    <img src="diagrams/pipeline.svg" alt="Pipeline diagram: data flow from raw NHANES and LMF inputs through scripts 01 to 14, ending in manuscript and protocol outputs.">
+    <a href="diagrams/pipeline.svg" target="_blank" rel="noopener"><img src="diagrams/pipeline.svg" alt="Pipeline diagram: data flow from raw NHANES and LMF inputs through scripts 01 to 14, ending in manuscript and protocol outputs."></a>
     <figcaption>Pipeline. Raw NHANES and LMF inputs flow through cohort assembly, score computation, three parallel survival analyses, decision curve analysis, pairwise comparisons, and the XGBoost ML ceiling, with the 500-rep PSU-cluster bootstrap as the protocol sensitivity analysis.</figcaption>
   </figure>
 
   <figure>
-    <img src="diagrams/scoring.svg" alt="Scoring diagram: 5 risk scores map from NHANES inputs to 3 mortality outcomes, with H2 and H3 contrast roles marked.">
+    <a href="diagrams/scoring.svg" target="_blank" rel="noopener"><img src="diagrams/scoring.svg" alt="Scoring diagram: 5 risk scores map from NHANES inputs to 3 mortality outcomes, with H2 and H3 contrast roles marked."></a>
     <figcaption>Scoring system. The five risk scores draw on overlapping NHANES inputs and are tested against the three mortality outcomes. H2 is PCE vs Framingham on cardiovascular mortality; H3 is the RMRS non-inferiority test against FINDRISC on diabetes-related mortality at the -0.05 AUC margin.</figcaption>
   </figure>
 
   <figure>
-    <img src="diagrams/structure.svg" alt="Repo directory tree: scripts, R/scores, R/utils, tests, data, results, manuscript, prereg, diagrams.">
+    <a href="diagrams/structure.svg" target="_blank" rel="noopener"><img src="diagrams/structure.svg" alt="Repo directory tree: scripts, R/scores, R/utils, tests, data, results, manuscript, prereg, diagrams."></a>
     <figcaption>Repository structure. Code lives in <code>scripts/</code>, <code>R/scores/</code>, and <code>R/utils/</code>. Outputs land in <code>results/</code>. The study protocol and analysis plan are in <code>prereg/</code> and the manuscript LaTeX source plus rendered PDF in <code>manuscript/</code>.</figcaption>
   </figure>
 </section>
@@ -126,7 +126,7 @@
     <li><span class="label">Study protocol</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/blob/master/prereg/osf-preregistration-draft.md">prereg/osf-preregistration-draft.md</a></li>
     <li><span class="label">Registration</span> <span style="color: var(--muted);">retrospective protocol in repository; not a prospective registration</span></li>
     <li><span class="label">Result CSVs</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/results">results/ (allcause, cv, dm, pairwise, dca, xgboost, bootstrap)</a></li>
-    <li><span class="label">Pipeline source</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/scripts">scripts/01 to 14</a></li>
+    <li><span class="label">Pipeline source</span> <a href="https://github.com/jayhemnani9910/longitudinal-mets-validation/tree/master/scripts">scripts/01 to 15</a></li>
   </ul>
 </section>
 

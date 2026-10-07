@@ -2,8 +2,7 @@
 # scripts/05_survival_allcause.R
 #
 # All-cause mortality survival analysis. Cox proportional hazards model with
-# survey weights, time-dependent ROC AUC at 5 and 10 years (IPCW-corrected),
-# and Brier score.
+# survey weights and time-dependent ROC AUC at 5 and 10 years (IPCW-corrected).
 #
 # Inputs:  data/processed/cohort_with_scores.rds
 # Outputs: results/cache/allcause_survival.rds, results/allcause_summary.csv
@@ -22,7 +21,6 @@ source("R/utils/survey_design.R")
 
 message("Loading cohort with scores ...")
 df <- readRDS("data/processed/cohort_with_scores.rds")
-des <- build_survey_design(df)
 
 scores <- c("rmrs_score", "b9_score", "pce_score",
             "framingham_score", "findrisc_score")

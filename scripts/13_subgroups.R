@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
 # scripts/13_subgroups.R
 #
-# Pre-registered subgroup analyses (OSF section 8): time-dependent AUC at the
-# primary horizon within strata of sex, race/ethnicity, and age band, for the
+# Subgroup analyses (OSF section 8): time-dependent AUC at the primary horizon
+# within strata of sex, race/ethnicity, and age band (5 bands here, not the 3
+# in the protocol), for the
 # primary score-outcome pairs. AUC is IPCW-corrected (timeROC, cause = 1 for the
 # competing-risk outcomes) on the same cohorts as the main analysis. Strata with
 # fewer than 10 events are reported as NA with their event count, since IPCW AUC

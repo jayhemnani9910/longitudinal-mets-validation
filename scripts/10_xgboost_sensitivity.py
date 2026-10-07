@@ -52,11 +52,11 @@ def ensure_csv():
     C++ compile is too slow on this machine), so we round-trip through CSV
     rather than feather. Rscript --no-init-file matches the Makefile.
     """
-    if os.path.exists(CSV_PATH) and os.path.getmtime(CSV_PATH) >= os.path.getmtime(RDS_PATH):
-        return
     if not os.path.exists(RDS_PATH):
         print(f"Missing {RDS_PATH}. Run `make scores` first.", file=sys.stderr)
         sys.exit(1)
+    if os.path.exists(CSV_PATH) and os.path.getmtime(CSV_PATH) >= os.path.getmtime(RDS_PATH):
+        return
     print(f"Generating {CSV_PATH} from {RDS_PATH} via Rscript ...")
     subprocess.run(
         [

@@ -142,6 +142,8 @@ figure object {
   display: block;
 }
 
+figure a img { cursor: zoom-in; }
+
 figcaption {
   font-size: 0.85rem;
   color: var(--muted);

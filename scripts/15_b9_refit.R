@@ -2,13 +2,13 @@
 # scripts/15_b9_refit.R
 #
 # B9 left-subtree US-refit sensitivity (pre-registration task 5.2b). The
-# transported B9 tree collapses the left subtree (BPWC_add <= 0.66) into a single
-# baseline-probability leaf because the published Figure 8(A) split values are
-# not legible. This script refits a fresh CART on a held-out NHANES split, using
+# transported B9 tree is the full 22-leaf reconstruction; its left subtree
+# (BPWC_add <= 0.66) holds 9 leaves (R/scores/b9_tree.R). This script refits
+# a fresh CART on a held-out NHANES split, using
 # the same three BPWC features to predict ATP III metabolic syndrome (the B9
 # target), and asks two questions:
-#   1. Does the data-driven tree grow discriminative structure inside the left
-#      region the transported tree leaves flat?
+#   1. How much discriminative structure does the data-driven tree grow inside
+#      the left region, next to the transported tree's 9 leaves?
 #   2. On held-out subjects, does the refit tree's predicted probability
 #      discriminate mortality better than the transported B9 score, and how does
 #      either compare with the continuous RMRS?
@@ -61,7 +61,8 @@ split_vars <- unique(as.character(fit$frame$var[fit$frame$var != "<leaf>"]))
 message(sprintf("Refit tree split variables: %s", paste(split_vars, collapse = ", ")))
 message(sprintf("Distinct predicted risks among left-region (BPWC_add<=0.66) test subjects: %d",
                 n_left_levels))
-message(sprintf("  (transported B9 assigns all of them the single value 0.137)"))
+message(sprintf("  (transported B9 assigns them %d distinct values)",
+                length(unique(round(test$b9_score[left], 4)))))
 
 # Question 2: held-out discrimination, refit vs transported B9 vs RMRS.
 test_cause <- test[test$cause_coded, ]
@@ -108,11 +109,7 @@ wl("\\centering")
 wl("\\caption{Decision-tree refit sensitivity. Time-dependent AUC on a held-out ",
    "30\\% NHANES split for the full transported B9 tree, a CART refit on the ",
    "training split using the same three BPWC features to predict ATP III ",
-   "metabolic syndrome, and the continuous RMRS for reference. The data-driven ",
-   "tree independently routes the low-BPWC region into a single low-risk leaf; ",
-   "the gain over the transported tree reflects re-estimating the split ",
-   "thresholds and leaf risks on US data, that is, transportability of the ",
-   "Korean calibration rather than the tree method.}")
+   "metabolic syndrome, and the continuous RMRS for reference.}")
 wl("\\label{tab:b9refit}")
 wl("\\begin{tabular}{lcccc}")
 wl("\\toprule")

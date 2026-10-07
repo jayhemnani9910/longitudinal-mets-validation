@@ -7,16 +7,18 @@
 # diabetes-related mortality at t = 14.5, registered margin -0.05 AUC).
 #
 # Resampling unit: NHANES PSU cluster defined as the cross of sdmvstra and
-# sdmvpsu (about 301 clusters). Sample whole clusters with replacement, then
-# take all subjects in those clusters. Do not sample individuals.
+# sdmvpsu (about 301 clusters). Within each stratum, sample its clusters with
+# replacement, then take all subjects in those clusters. Do not sample
+# individuals.
 #
 # Per resample, recompute:
 #   1. AUC at primary horizons for each registered score-outcome pair
 #      via timeROC::timeROC(iid = FALSE). iid = TRUE OOMs at N >= 17k.
-#   2. Delta-AUCs for the registered pairwise contrasts on the horizon-cap
-#      binary outcome via pROC::roc.test DeLong (matches script 09).
-#   3. DCA net benefit at one threshold per outcome (7.5% CV, 5% all-cause,
-#      2% diabetes), per score, with Cox-recalibrated horizon-specific
+#   2. Delta-AUCs for the registered pairwise contrasts: primary is the paired
+#      IPCW time-dependent delta (timeROC), secondary is pROC DeLong on the
+#      horizon-cap binary outcome (matches script 09).
+#   3. DCA net benefit at one threshold per outcome (5% all-cause, 2% CV,
+#      1% diabetes), per score, with Cox-recalibrated horizon-specific
 #      predicted risk (matches script 08).
 #
 # Toggle the rep count via env var N_REPS (default 10 for smoke test).
