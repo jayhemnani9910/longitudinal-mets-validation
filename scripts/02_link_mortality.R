@@ -102,7 +102,14 @@ lmf_list <- lapply(file.path("data/raw/lmf", lmf_files), function(p) {
     }
   )
 })
-lmf_list <- Filter(Negate(is.null), lmf_list)
+# A missing or unparsed LMF file would silently drop every subject in that
+# cycle at the inner join in 03, so fail loudly and name what is missing.
+bad <- lmf_files[vapply(lmf_list, is.null, logical(1))]
+if (length(bad) > 0) {
+  stop(sprintf(paste0("LMF incomplete: %d of %d expected files are missing or ",
+                      "failed to parse. Re-run to retry:\n  %s"),
+               length(bad), length(lmf_files), paste(bad, collapse = "\n  ")))
+}
 lmf_all <- do.call(rbind, lmf_list)
 
 # Coerce numeric columns (replace '.' and blank missing codes with NA)

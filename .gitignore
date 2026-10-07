@@ -48,3 +48,7 @@ manuscript/*.out
 /CLAUDE.md
 prereg/pipeline-pause-*.md
 prereg/r-install-notes.md
+
+# /audit outputs
+graphify-out/
+.audit/

@@ -32,7 +32,7 @@ Full results in `results/*_summary.csv`. Rendered manuscript at [`manuscript/mai
 
 ```
 .
-├── scripts/        Numbered pipeline 01..14 (R + Python)
+├── scripts/        Numbered pipeline 01..15 (R + Python)
 ├── R/scores/       5 risk score implementations + tests
 ├── R/utils/        NHANES loader and survey-design helpers
 ├── tests/scores/   testthat unit tests
