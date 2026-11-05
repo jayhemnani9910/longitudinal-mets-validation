@@ -19,10 +19,10 @@ Manuscript draft: [`manuscript/main.pdf`](manuscript/main.pdf)
 ```bash
 git clone https://github.com/jayhemnani9910/longitudinal-mets-validation.git
 cd longitudinal-mets-validation
-Rscript --no-init-file -e 'install.packages("testthat", repos = "https://cloud.r-project.org"); testthat::test_dir("tests/scores")'
+make test   # needs R and the testthat package
 ```
 
-That runs the unit tests for the five score implementations. The full pipeline is under [Reproducing](#reproducing).
+That runs the 91 unit tests for the five score implementations. The full pipeline is under [Reproducing](#reproducing).
 
 ## How it works
 
@@ -56,7 +56,7 @@ make scores       # compute the five scores
 make analyses     # all-cause Cox, cardiovascular and diabetes Fine-Gray, calibration
 make dca          # decision curves, pairwise comparisons, XGBoost
 make tables       # Table 1, calibration curves, subgroups, B9 refit
-make bootstrap    # 500-rep PSU-cluster bootstrap CIs (slow, hours)
+make bootstrap    # 500-rep PSU-cluster bootstrap CIs (slow)
 make manuscript   # build manuscript/main.pdf
 make test         # score unit tests
 ```
