@@ -97,4 +97,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT for code (see [`LICENSE`](LICENSE)). CC-BY for figures and manuscript text.
+Code is MIT (see [`LICENSE`](LICENSE)). Figures and manuscript text are CC BY 4.0 (see [`LICENSE-CC-BY-4.0`](LICENSE-CC-BY-4.0)).
