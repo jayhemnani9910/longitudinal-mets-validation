@@ -52,3 +52,7 @@ prereg/r-install-notes.md
 # /audit outputs
 graphify-out/
 .audit/
+
+# Env files
+.env*
+!.env.example

@@ -3,16 +3,7 @@ name: R score tests
 on:
   push:
     branches: [master]
-    paths:
-      - 'R/scores/**'
-      - 'tests/scores/**'
-      - '.github/workflows/test.yml'
   pull_request:
-    branches: [master]
-    paths:
-      - 'R/scores/**'
-      - 'tests/scores/**'
-      - '.github/workflows/test.yml'
 
 jobs:
   testthat:
